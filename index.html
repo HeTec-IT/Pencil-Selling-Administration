@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pencil Selling Administration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',-apple-system,system-ui,sans-serif;background:#f1f5f9;color:#0f172a;min-height:100vh}
+  .wrap{max-width:1080px;margin:0 auto;padding:20px 16px 60px}
+
+  /* Login */
+  #login{position:fixed;inset:0;background:linear-gradient(135deg,#1e3a8a,#2563eb);display:flex;align-items:center;justify-content:center;padding:20px;z-index:100}
+  .loginbox{background:#fff;border-radius:22px;padding:34px 30px;width:100%;max-width:380px;box-shadow:0 25px 70px rgba(0,0,0,.35);text-align:center}
+  .loginbox h1{font-size:21px;font-weight:900;margin-bottom:6px}
+  .loginbox p{font-size:13px;color:#64748b;margin-bottom:22px}
+  input[type=password],input[type=text],input[type=date],textarea{width:100%;padding:13px 15px;font-size:15px;border:2px solid #e2e8f0;border-radius:12px;outline:none;font-family:inherit;transition:border-color .15s}
+  input:focus,textarea:focus{border-color:#2563eb}
+  .btn{padding:13px 20px;border:none;border-radius:12px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;font-weight:800;font-size:15px;cursor:pointer;font-family:inherit;transition:transform .1s,box-shadow .15s;box-shadow:0 4px 14px rgba(37,99,235,.3)}
+  .btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(37,99,235,.4)}
+  .btn:active{transform:translateY(0)}
+  .btn:disabled{background:#cbd5e1;box-shadow:none;cursor:not-allowed;transform:none}
+  .btn-ghost{background:#f8fafc;color:#475569;border:1.5px solid #e2e8f0;box-shadow:none;font-weight:700}
+  .btn-ghost:hover{background:#f1f5f9;box-shadow:none}
+  .btn-danger{background:#fef2f2;color:#dc2626;border:1.5px solid #fecaca;box-shadow:none}
+  .btn-sm{padding:8px 13px;font-size:13px}
+
+  /* Header */
+  header{background:#fff;border-radius:18px;padding:20px 22px;margin-bottom:18px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 10px rgba(15,23,42,.06)}
+  .logo{width:46px;height:46px;border-radius:13px;background:linear-gradient(135deg,#2563eb,#1d4ed8);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+  header h1{font-size:19px;font-weight:900;letter-spacing:-.01em}
+  header .sub{font-size:12.5px;color:#64748b;margin-top:2px}
+
+  /* Cards */
+  .card{background:#fff;border-radius:18px;padding:22px;margin-bottom:18px;box-shadow:0 2px 10px rgba(15,23,42,.06)}
+  .card h2{font-size:15px;font-weight:900;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+  .card .hint{font-size:12.5px;color:#64748b;margin-bottom:18px;line-height:1.5}
+
+  /* KPIs */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .kpi{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:14px;padding:15px}
+  .kpi .lbl{font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+  .kpi .val{font-size:26px;font-weight:900;line-height:1}
+  .kpi .sub{font-size:11px;color:#94a3b8;margin-top:4px}
+
+  /* News rows */
+  .news-row{display:flex;gap:9px;align-items:flex-start;margin-bottom:10px;padding:12px;background:#fff7ed;border:1.5px solid #fed7aa;border-radius:13px}
+  .news-row .num{width:24px;height:24px;border-radius:8px;background:#f97316;color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:5px}
+  .news-row .fields{flex:1;display:flex;flex-direction:column;gap:7px}
+  .news-row textarea{min-height:48px;resize:vertical;font-size:14px;background:#fff;border-color:#fed7aa}
+  .news-row .meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .news-row .meta label{font-size:11px;font-weight:700;color:#9a3412}
+  .news-row input[type=date]{width:auto;padding:7px 10px;font-size:13px;border-color:#fed7aa;background:#fff}
+  .del{width:30px;height:30px;border-radius:9px;border:1.5px solid #fecaca;background:#fef2f2;color:#dc2626;cursor:pointer;font-size:15px;font-weight:900;flex-shrink:0;margin-top:2px;line-height:1}
+
+  /* Preview */
+  .preview{display:flex;align-items:center;background:linear-gradient(90deg,#f97316,#fb923c);color:#fff;height:28px;border-radius:9px;overflow:hidden;margin-bottom:16px}
+  .preview .tag{padding:0 10px;height:100%;display:flex;align-items:center;gap:5px;background:rgba(0,0,0,.14);font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;flex-shrink:0}
+  .preview .track{flex:1;overflow:hidden;position:relative;height:100%}
+  .preview .track span{position:absolute;white-space:nowrap;top:50%;transform:translateY(-50%);font-size:12px;font-weight:700;animation:scroll 24s linear infinite}
+  @keyframes scroll{from{transform:translate(0,-50%)}to{transform:translate(-50%,-50%)}}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;padding:9px 8px;font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid #e2e8f0}
+  td{padding:10px 8px;border-bottom:1px solid #f1f5f9}
+  tr:last-child td{border-bottom:none}
+  .bar{height:18px;border-radius:5px;background:#f1f5f9;overflow:hidden;position:relative;min-width:90px}
+  .bar div{height:100%;border-radius:5px}
+  .bar span{position:absolute;left:6px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:800}
+
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .msg{padding:11px 14px;border-radius:11px;font-size:13px;font-weight:700;margin-top:14px}
+  .ok{background:#f0fdf4;color:#15803d;border:1.5px solid #bbf7d0}
+  .err{background:#fef2f2;color:#dc2626;border:1.5px solid #fecaca}
+  .empty{padding:26px;text-align:center;color:#94a3b8;font-size:13px;background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:13px}
+  /* Marken-Tabs */
+  .brands{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+  .brand{padding:10px 18px;border-radius:12px;border:2px solid #e2e8f0;background:#fff;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;color:#94a3b8;transition:all .15s;display:flex;align-items:center;gap:7px}
+  .brand:hover{border-color:#cbd5e1}
+  .brand.on{color:#fff}
+  .brand .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+  .brand .cnt{font-size:11px;font-weight:900;padding:1px 7px;border-radius:999px;background:rgba(0,0,0,.14)}
+
+  select{padding:9px 12px;font-size:13px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;background:#fff;font-weight:600;cursor:pointer;outline:none}
+
+  /* Coaching-Analyse-Balken */
+  .sec-head{font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+  .arow{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+  .arow .lbl{width:150px;flex-shrink:0;font-size:12.5px;font-weight:600;color:#334155;text-align:right}
+  .arow .track{flex:1;height:22px;border-radius:6px;background:#eef2f9;overflow:hidden;position:relative}
+  .arow .track > div{height:100%;border-radius:6px;transition:width .3s}
+  .arow .cnt{width:96px;flex-shrink:0;font-size:12px;font-weight:800;color:#0f172a}
+  .arow .cnt .pct{color:#94a3b8;font-weight:700;margin-left:4px}
+  .skipbadge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800}
+  .reason-item{padding:11px 13px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+  .reason-item:last-child{border-bottom:none}
+  .reason-list{max-height:340px;overflow-y:auto;border:1px solid #eef2f9;border-radius:12px}
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<div id="login">
+  <div class="loginbox">
+    <div style="font-size:40px;margin-bottom:10px">🔐</div>
+    <h1>Pencil Selling</h1>
+    <p>Administration</p>
+    <input type="password" id="pw" placeholder="Passwort" autocomplete="current-password">
+    <button class="btn" style="width:100%;margin-top:12px" onclick="doLogin()">Anmelden</button>
+    <div id="loginErr" style="color:#dc2626;font-size:12.5px;font-weight:700;margin-top:11px;display:none">Falsches Passwort</div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div class="wrap" id="app" style="display:none">
+  <header>
+    <div class="logo">📊</div>
+    <div style="flex:1">
+      <h1>Pencil Selling Administration</h1>
+      <div class="sub">HeTec GmbH · Übersicht &amp; News-Ticker</div>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="location.reload()">↻ Neu laden</button>
+  </header>
+
+  <!-- KPIs -->
+  <div class="card">
+    <h2>📈 Überblick</h2>
+    <div class="hint">Alle abgeschlossenen Beratungen aus der zentralen Statistik.</div>
+    <div class="row" style="margin-bottom:12px">
+      <label style="font-size:12px;font-weight:800;color:#64748b">🏪 Shop:</label>
+      <select id="shopFilter" onchange="onShopChange()"><option value="__all__">Alle Shops</option></select>
+      <span id="shopInfo" style="font-size:11.5px;color:#94a3b8;font-weight:600"></span>
+    </div>
+    <div class="row" style="margin-bottom:12px">
+      <label style="font-size:12px;font-weight:800;color:#64748b">👤 Mitarbeiter:</label>
+      <select id="empFilter" onchange="renderAll()"><option value="__all__">Alle Mitarbeiter</option></select>
+    </div>
+    <div class="row" style="margin-bottom:16px">
+      <label style="font-size:12px;font-weight:800;color:#64748b">Zeitraum:</label>
+      <select id="range" onchange="onRangeChange()">
+        <option value="today">Heute</option>
+        <option value="7">Letzte 7 Tage</option>
+        <option value="30" selected>Letzte 30 Tage</option>
+        <option value="90">Letzte 90 Tage</option>
+        <option value="365">Letzte 12 Monate</option>
+        <option value="0">Alles</option>
+        <option value="month">Kalendermonat…</option>
+        <option value="custom">Eigener Zeitraum…</option>
+      </select>
+      <!-- Monatsauswahl -->
+      <input type="month" id="monthPick" style="display:none" onchange="renderStats()">
+      <!-- Eigener Zeitraum -->
+      <span id="customRange" style="display:none;align-items:center;gap:6px">
+        <input type="date" id="dateFrom" onchange="renderStats()">
+        <span style="color:#94a3b8;font-weight:700">bis</span>
+        <input type="date" id="dateTo" onchange="renderStats()">
+      </span>
+      <span id="rangeInfo" style="font-size:11.5px;color:#94a3b8;font-weight:600"></span>
+    </div>
+    <div class="kpis" id="kpis"><div class="empty" style="grid-column:1/-1">Lade Daten…</div></div>
+  </div>
+
+  <!-- DSL -->
+  <div class="card">
+    <h2>🌐 DSL-Anbieter der Kunden</h2>
+    <div class="hint">Welchen Anbieter hatte der Kunde bisher – und wie oft wurde daraufhin ein DSL-Angebot gemacht? o2-Bestandskunden fallen nicht mehr aus der Auswertung.</div>
+    <div id="dsl"><div class="empty">Lade Daten…</div></div>
+  </div>
+
+  <!-- Mitarbeiter -->
+  <div class="card">
+    <h2>👥 Mitarbeiter</h2>
+    <div class="hint">Vorgänge und Abschlussquote je Mitarbeiter im gewählten Zeitraum.</div>
+    <div id="agents"><div class="empty">Lade Daten…</div></div>
+  </div>
+
+  <!-- Coaching -->
+  <div class="card">
+    <h2>🎯 Coaching-Analyse</h2>
+    <div class="hint">
+      Wie konsequent wird die Mappe genutzt? Zeigt je Feld, wie oft es tatsächlich ausgefüllt wurde –
+      die Basis für gezielte Entwicklungsgespräche. Folgt dem <b>Mitarbeiter-Filter oben</b>.
+    </div>
+    <div id="coachScope" style="font-size:12px;font-weight:700;color:#2563eb;margin-bottom:14px"></div>
+    <div id="coachQuality"></div>
+    <div id="coachIst"></div>
+    <div id="coachOffer" style="margin-top:20px"></div>
+    <div id="coachCost" style="margin-top:20px"></div>
+  </div>
+
+  <!-- Skip-Limits -->
+  <div class="card">
+    <h2>⏭️ Skip-Limits &amp; Gründe</h2>
+    <div class="hint">
+      Übersprungene Beratungen je Mitarbeiter diesen Monat. Jeder übersprungene Vorgang zählt +1.
+      Darunter die digital erfassten Gründe – wichtig, um Muster zu erkennen (z.&nbsp;B. „zu wenig Zeit“).
+    </div>
+    <div id="skipTable"><div class="empty">Lade Daten…</div></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:22px 0 10px">
+      <div style="font-size:13px;font-weight:900;color:#0f172a">📋 Digitale Skip-Gründe <span id="skipReasonCount" style="color:#94a3b8;font-weight:700"></span></div>
+      <button class="btn btn-ghost btn-sm" onclick="exportSkipCSV()">⬇ Gründe als CSV</button>
+    </div>
+    <div id="skipReasons"><div class="empty">Lade Daten…</div></div>
+  </div>
+
+  <!-- News -->
+  <div class="card">
+    <h2>📢 News-Ticker</h2>
+    <div class="hint">
+      Je Marke bis zu <b>5 Meldungen</b>. Sie laufen als orange Leiste oben im Pencil Selling durch –
+      auf allen Tablets <b>der jeweiligen Marke</b>.
+      Der Mitarbeiter kann sie wegklicken, beim nächsten Neuladen sind sie wieder da.
+      <b>Ablaufdatum</b> ist optional: danach verschwindet die Meldung von selbst.
+    </div>
+
+    <div class="brands" id="brands"></div>
+
+    <div style="font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px">Vorschau <span id="prevBrand" style="color:#cbd5e1"></span></div>
+    <div class="preview">
+      <div class="tag">📢 News</div>
+      <div class="track"><span id="prev">Noch keine Meldungen…</span></div>
+    </div>
+
+    <div id="newsRows"></div>
+
+    <div class="row" style="margin-top:14px">
+      <button class="btn btn-ghost btn-sm" id="addBtn" onclick="addNews()">+ Meldung hinzufügen</button>
+      <div style="flex:1"></div>
+      <button class="btn" onclick="saveNews()" id="saveBtn">💾 Speichern &amp; veröffentlichen</button>
+    </div>
+    <div id="newsMsg"></div>
+  </div>
+</div>
+
+<script>
+// ══ Firebase (dieselbe DB wie Pencil Selling) ══
+const FB = {
+  apiKey: "AIzaSyCgKvoW6mB_heUkQDpeZMFE-0CQSUFuN0g",
+  authDomain: "pencil-selling-stats-2f86e.firebaseapp.com",
+  projectId: "pencil-selling-stats-2f86e",
+  storageBucket: "pencil-selling-stats-2f86e.firebasestorage.app",
+  messagingSenderId: "166126857606",
+  appId: "1:166126857606:web:0b29898ae53a8c3aaa1007"
+};
+const ADMIN_PW = 'telekom2026';   // gleiches Passwort wie in Pencil Selling
+const NEWS_MAX = 5;
+
+// ── Marken: je Marke ein eigenes Firestore-Dokument (news/o2, news/telekom, …) ──
+const BRANDS = [
+  { id:'o2',       label:'o2',       color:'#0019a5' },
+  { id:'telekom',  label:'Telekom',  color:'#e20074' },
+  { id:'vodafone', label:'Vodafone', color:'#e60000' }
+];
+let brand = 'o2';                 // aktuell bearbeitete Marke
+let newsByBrand = {};             // { o2:[…], telekom:[…], vodafone:[…] }
+let dirty = {};                   // { o2:true } = ungespeicherte Änderungen
+
+let db = null, rows = [];
+
+// Bequemer Zugriff auf die Meldungen der aktuellen Marke
+function curNews(){
+  if (!Array.isArray(newsByBrand[brand])) newsByBrand[brand] = [{ text:'', bis:'' }];
+  return newsByBrand[brand];
+}
+
+// ── Login ──
+function doLogin(){
+  const v = document.getElementById('pw').value;
+  if (v !== ADMIN_PW){
+    document.getElementById('loginErr').style.display = 'block';
+    return;
+  }
+  try { sessionStorage.setItem('hetec_admin', '1'); } catch(e){}
+  start();
+}
+document.getElementById('pw').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+try { if (sessionStorage.getItem('hetec_admin') === '1') setTimeout(start, 0); } catch(e){}
+
+function start(){
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  try {
+    const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(FB);
+    db = firebase.firestore(app);
+  } catch(e){
+    alert('Keine Verbindung zu Firebase: ' + e.message);
+    return;
+  }
+  loadNews();
+  loadStats();
+}
+
+// ══ NEWS ══
+// Alle Marken auf einmal laden → Umschalten geht danach ohne Wartezeit
+async function loadNews(){
+  for (const b of BRANDS){
+    try {
+      const snap = await db.collection('news').doc(b.id).get();
+      const items = (snap.exists && Array.isArray(snap.data().items)) ? snap.data().items : [];
+      newsByBrand[b.id] = items.length ? items : [{ text:'', bis:'' }];
+    } catch(e){
+      newsByBrand[b.id] = [{ text:'', bis:'' }];
+    }
+  }
+  renderBrands();
+  renderNews();
+}
+
+// Marken-Tabs oben
+function renderBrands(){
+  const box = document.getElementById('brands');
+  box.innerHTML = '';
+  BRANDS.forEach(b => {
+    const items = (newsByBrand[b.id] || []).filter(n => (n.text||'').trim());
+    const on = (b.id === brand);
+    const btn = document.createElement('button');
+    btn.className = 'brand' + (on ? ' on' : '');
+    if (on){ btn.style.background = b.color; btn.style.borderColor = b.color; }
+    btn.innerHTML =
+      '<span class="dot" style="background:' + (on ? '#fff' : b.color) + '"></span>' +
+      esc(b.label) +
+      (items.length ? '<span class="cnt">' + items.length + '</span>' : '') +
+      (dirty[b.id] ? '<span style="font-size:15px;line-height:1;color:' + (on?'#fff':'#f97316') + '" title="Ungespeicherte Änderungen">•</span>' : '');
+    btn.onclick = () => { brand = b.id; renderBrands(); renderNews(); };
+    box.appendChild(btn);
+  });
+}
+
+function renderNews(){
+  const box = document.getElementById('newsRows');
+  const news = curNews();
+  box.innerHTML = '';
+  news.forEach((it, i) => {
+    const d = document.createElement('div');
+    d.className = 'news-row';
+    d.innerHTML =
+      '<div class="num">' + (i+1) + '</div>' +
+      '<div class="fields">' +
+        '<textarea placeholder="z.B. Ab Montag neue Tarife im Sortiment – bitte Aktionsmappe beachten!" oninput="upd(' + i + ',this.value)">' +
+          (it.text || '').replace(/</g,'&lt;') +
+        '</textarea>' +
+        '<div class="meta">' +
+          '<label>Läuft bis (optional):</label>' +
+          '<input type="date" value="' + (it.bis || '') + '" onchange="updBis(' + i + ',this.value)">' +
+          (it.bis ? '<span style="font-size:11px;color:#9a3412;font-weight:700">verschwindet danach automatisch</span>' : '') +
+        '</div>' +
+      '</div>' +
+      '<button class="del" onclick="delNews(' + i + ')" title="Löschen">×</button>';
+    box.appendChild(d);
+  });
+  document.getElementById('addBtn').disabled = (news.length >= NEWS_MAX);
+  document.getElementById('addBtn').textContent =
+    news.length >= NEWS_MAX ? 'Maximum (5) erreicht' : '+ Meldung hinzufügen';
+
+  // Vorschau-Leiste in Markenfarbe kennzeichnen
+  const b = BRANDS.find(x => x.id === brand) || BRANDS[0];
+  const pb = document.getElementById('prevBrand');
+  if (pb){ pb.textContent = '· ' + b.label; pb.style.color = b.color; }
+  const sb = document.getElementById('saveBtn');
+  if (sb) sb.textContent = '💾 Für ' + b.label + ' veröffentlichen';
+
+  updPreview();
+}
+
+function upd(i,v){ curNews()[i].text = v; dirty[brand] = true; renderBrands(); updPreview(); }
+function updBis(i,v){ curNews()[i].bis = v; dirty[brand] = true; renderNews(); renderBrands(); }
+function delNews(i){
+  const n = curNews(); n.splice(i,1);
+  if (n.length === 0) newsByBrand[brand] = [{text:'',bis:''}];
+  dirty[brand] = true; renderNews(); renderBrands();
+}
+function addNews(){
+  const n = curNews();
+  if (n.length < NEWS_MAX){ n.push({text:'',bis:''}); dirty[brand] = true; renderNews(); renderBrands(); }
+}
+
+function updPreview(){
+  const t = curNews().map(n => (n.text||'').trim()).filter(Boolean).join('   •   ');
+  document.getElementById('prev').textContent = t || 'Noch keine Meldungen…';
+}
+
+// Speichert NUR die aktuell gewählte Marke
+async function saveNews(){
+  const btn = document.getElementById('saveBtn');
+  const msg = document.getElementById('newsMsg');
+  const b = BRANDS.find(x => x.id === brand) || BRANDS[0];
+  const alt = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Speichere…';
+  try {
+    const clean = curNews()
+      .filter(n => (n.text||'').trim())
+      .slice(0, NEWS_MAX)
+      .map(n => ({ text: n.text.trim().slice(0,300), bis: (n.bis||'').slice(0,10) }));
+    await db.collection('news').doc(brand).set({
+      items: clean,
+      updatedAt: new Date().toISOString()
+    });
+    dirty[brand] = false;
+    renderBrands();
+    msg.className = 'msg ok';
+    msg.textContent = clean.length
+      ? '✅ ' + clean.length + ' Meldung(en) für ' + b.label + ' veröffentlicht. Erscheinen nach dem nächsten Neuladen auf allen ' + b.label + '-Tablets.'
+      : '✅ Alle ' + b.label + '-Meldungen entfernt – der Ticker wird dort ausgeblendet.';
+  } catch(e){
+    msg.className = 'msg err';
+    msg.textContent = '❌ Fehler: ' + e.message;
+  }
+  btn.disabled = false; btn.textContent = alt;
+  setTimeout(() => { msg.textContent = ''; msg.className = ''; }, 7000);
+}
+
+// Warnung bei ungespeicherten Änderungen
+window.addEventListener('beforeunload', (e) => {
+  if (Object.values(dirty).some(Boolean)){ e.preventDefault(); e.returnValue = ''; }
+});
+
+// ══ STATISTIK ══
+async function loadStats(){
+  try {
+    const snap = await db.collection('analytics').orderBy('ts','desc').limit(3000).get();
+    rows = snap.docs.map(d => d.data());
+  } catch(e){
+    // Fallback: manche Setups nutzen andere Collection-Namen
+    try {
+      const snap2 = await db.collection('rows').limit(3000).get();
+      rows = snap2.docs.map(d => d.data());
+    } catch(e2){ rows = []; }
+  }
+  await loadSkipLimits();
+  fillShopDropdown();
+  fillEmpDropdown();
+  renderAll();
+}
+
+// ── Coaching-Feldschlüssel: 1:1 wie im Pencil Selling ──
+const IST_KEYS = [
+  ['sit_Kundenname','Kundenname'],['sit_Rufnummer','Rufnummer'],['sit_Anbieter','Anbieter'],
+  ['sit_Hardware','Hardware'],['sit_Nutzung','Nutzung'],['sit_Haushalt','Haushalt'],
+  ['sit_WeitereProdukte','Weitere Produkte'],['sit_Fernsehen','Fernsehen'],
+  ['sit_WiFi','Wi-Fi'],['sit_Gesamtkosten','Gesamtkosten'],
+];
+const OFFER_KEYS = [
+  ['offer1','1. Hardware, Anbieter & Nutzung'],['offer2','2. Haushalt & Weitere Produkte'],['offer3','3. Fernsehen & Wi-Fi'],
+];
+const COST_KEYS = [
+  ['cost_einmalig','Einmalig (€)'],['cost_monatlich1','Monatlich 1. Jahr'],
+  ['cost_monatlich2','Monatlich 2. Jahr'],['cost_smartphone','Smartphone Finanzierung'],
+];
+
+let skipData = {};   // { agent: {count, limit} }
+
+function monthKey(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+
+async function loadSkipLimits(){
+  skipData = {};
+  const agents = [...new Set(rows.map(r => (r.user||'').toString().trim()).filter(u => u && u !== '–' && u !== 'Unbekannt'))];
+  const mk = monthKey();
+  for (const a of agents){
+    let count = 0, limit = 15;
+    try { const c = await db.collection('skip_limits').doc('skip_'+a+'_'+mk).get(); if (c.exists) count = c.data().count || 0; } catch(_){}
+    try { const l = await db.collection('skip_limits').doc('limit_'+a).get(); if (l.exists) limit = l.data().max_limit || 15; } catch(_){}
+    skipData[a] = { count, limit };
+  }
+}
+
+// Balkenzeile bauen
+function abar(label, count, total, color){
+  const pct = total ? Math.round(count/total*100) : 0;
+  return '<div class="arow"><div class="lbl">'+esc(label)+'</div>' +
+    '<div class="track"><div style="width:'+pct+'%;background:'+color+'"></div></div>' +
+    '<div class="cnt">'+count+'×<span class="pct">'+pct+'%</span></div></div>';
+}
+
+function renderCoaching(){
+  // Folgt dem globalen Shop- + Mitarbeiter-Filter (SROWS)
+  const f = SROWS().filter(r => inRange(r));
+  const total = f.length;
+  // Scope-Hinweis
+  const sc = document.getElementById('coachScope');
+  if (sc){
+    const emp = currentEmpFilter();
+    sc.textContent = emp === '__all__' ? '👥 Alle Mitarbeiter' : '👤 ' + emp;
+  }
+
+  const used = (key) => f.filter(r => { const cs = r.canvasStats||{}; return cs[key] && cs[key].used; }).length;
+
+  // ── Qualitätskontrolle: 1. Seite komplett (10/10 Felder)? Ziel: 75% ──
+  const ISTk = IST_KEYS.map(([k])=>k);
+  const complete = f.filter(r => { const cs=r.canvasStats||{}; return ISTk.every(k => cs[k] && cs[k].used); }).length;
+  const qRate = total ? Math.round(complete/total*100) : 0;
+  const ZIEL = 75;
+  const passZiel = qRate >= ZIEL;
+  const qCol = passZiel ? '#16a34a' : qRate >= 50 ? '#f59e0b' : '#dc2626';
+  const verpasst = total - complete;
+  let q = '<div class="sec-head">✅ Qualitätskontrolle – 1. Seite vollständig (10/10 Felder)</div>';
+  if (!total){ q += '<div class="empty">Keine Beratungen im Zeitraum.</div>'; }
+  else {
+    q += '<div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;background:#f8fafc;border:1.5px solid '+(passZiel?'#bbf7d0':qRate>=50?'#fde68a':'#fecaca')+';border-radius:14px;padding:16px 18px">';
+    // großer Prozentwert
+    q += '<div style="text-align:center;min-width:120px">' +
+         '<div style="font-size:40px;font-weight:900;color:'+qCol+';line-height:1">'+qRate+'%</div>' +
+         '<div style="font-size:11px;font-weight:700;color:#64748b;margin-top:2px">vollständig</div></div>';
+    // Balken mit Ziellinie bei 75%
+    q += '<div style="flex:1;min-width:220px">';
+    q += '<div style="position:relative;height:26px;border-radius:7px;background:#eef2f9;overflow:visible">' +
+         '<div style="height:100%;width:'+qRate+'%;background:'+qCol+';border-radius:7px;transition:width .3s"></div>' +
+         // Ziellinie
+         '<div style="position:absolute;top:-4px;bottom:-4px;left:'+ZIEL+'%;width:2px;background:#0f172a"></div>' +
+         '<div style="position:absolute;top:-18px;left:'+ZIEL+'%;transform:translateX(-50%);font-size:10px;font-weight:800;color:#0f172a;white-space:nowrap">Ziel '+ZIEL+'%</div>' +
+         '</div>';
+    q += '<div style="display:flex;justify-content:space-between;margin-top:10px;font-size:12px">' +
+         '<span style="color:#16a34a;font-weight:700">'+complete+' vollständig</span>' +
+         '<span style="color:'+(verpasst>0?'#dc2626':'#94a3b8')+';font-weight:700">'+verpasst+' unvollständig</span>' +
+         '<span style="color:#64748b">von '+total+'</span></div>';
+    q += '</div>';
+    // Status-Badge
+    q += '<div style="min-width:130px;text-align:center">' +
+         '<div style="display:inline-block;padding:7px 14px;border-radius:999px;font-size:13px;font-weight:800;background:'+(passZiel?'#f0fdf4':'#fef2f2')+';color:'+qCol+'">' +
+         (passZiel?'✓ Ziel erreicht':'✗ unter Ziel')+'</div>' +
+         '<div style="font-size:10.5px;color:#94a3b8;margin-top:6px">von 100 dürfen max. 25 unvollständig sein</div></div>';
+    q += '</div>';
+  }
+  document.getElementById('coachQuality').innerHTML = q;
+
+  // IST-Analyse
+  let ist = '<div class="sec-head">🔍 Ist-Analyse – wie oft abgefragt <span style="color:#cbd5e1;font-weight:700">('+total+' Beratungen)</span></div>';
+  if (!total){ ist += '<div class="empty">Keine Beratungen im Zeitraum.</div>'; }
+  else IST_KEYS.forEach(([k,l]) => { ist += abar(l, used(k), total, '#2563eb'); });
+  document.getElementById('coachIst').innerHTML = ist;
+
+  // Angebote
+  let off = '<div class="sec-head">📄 Angebote – wie oft präsentiert</div>';
+  if (total) OFFER_KEYS.forEach(([k,l]) => { off += abar(l, used(k), total, '#7c3aed'); });
+  document.getElementById('coachOffer').innerHTML = total ? off : '';
+
+  // Kosten
+  let cost = '<div class="sec-head">💶 Kostenübersicht – wie oft Preise eingetragen</div>';
+  if (total) COST_KEYS.forEach(([k,l]) => { cost += abar(l, used(k), total, '#059669'); });
+  document.getElementById('coachCost').innerHTML = total ? cost : '';
+}
+
+function renderSkip(){
+  // Tabelle – nur Mitarbeiter des gewählten Shops
+  const shopAgents = new Set(SROWS().map(r => (r.user||'').toString().trim()).filter(u => u && u !== '–' && u !== 'Unbekannt'));
+  const noFilter = currentShopFilter() === '__all__' && currentEmpFilter() === '__all__';
+  const agents = Object.keys(skipData).filter(a => noFilter || shopAgents.has(a)).sort();
+  const tbl = document.getElementById('skipTable');
+  if (!agents.length){ tbl.innerHTML = '<div class="empty">Keine Mitarbeiterdaten für diesen Shop.</div>'; }
+  else {
+    let h = '<table><tr><th>Mitarbeiter</th><th>Übersprungen (Monat)</th><th>Limit</th><th style="text-align:right">Auslastung</th></tr>';
+    agents.forEach(a => {
+      const d = skipData[a];
+      const pct = d.limit ? Math.round(d.count/d.limit*100) : 0;
+      const col = pct >= 90 ? '#dc2626' : pct >= 60 ? '#f59e0b' : '#16a34a';
+      h += '<tr>' +
+        '<td style="font-weight:700">'+esc(a)+'</td>' +
+        '<td><span class="skipbadge" style="background:'+(pct>=90?'#fef2f2':pct>=60?'#fffbeb':'#f0fdf4')+';color:'+col+'">'+d.count+' / '+d.limit+'</span></td>' +
+        '<td style="color:#94a3b8">'+d.limit+'</td>' +
+        '<td style="text-align:right;font-weight:800;color:'+col+'">'+pct+'%</td>' +
+      '</tr>';
+    });
+    tbl.innerHTML = h + '</table>';
+  }
+
+  // Digitale Gründe (aus analytics: skipReasonText) – GRUPPIERT
+  const reasons = SROWS()
+    .filter(r => inRange(r))
+    .filter(r => r.skipReasonText && String(r.skipReasonText).trim())
+    .map(r => ({ user:(r.user||'–').toString().trim(), ts:r.ts, text:String(r.skipReasonText).trim() }))
+    .sort((a,b) => new Date(b.ts) - new Date(a.ts));
+
+  document.getElementById('skipReasonCount').textContent = '('+reasons.length+')';
+  const box = document.getElementById('skipReasons');
+  if (!reasons.length){ box.innerHTML = '<div class="empty">Keine digital erfassten Skip-Gründe im Zeitraum.</div>'; return; }
+
+  // Feste Gründe aus dem Pencil Selling (alles andere = „Sonstiges")
+  const FIXED = ['Nur Handyfinanzierung','Sprachbarrieren','Shop Agent keine Lust','Zeitdruck / zu wenig Zeit','Technischer Fehler / App-Problem'];
+  const groups = {};
+  FIXED.forEach(f => groups[f] = []);
+  const sonstiges = [];
+  reasons.forEach(r => {
+    const hit = FIXED.find(f => r.text === f);
+    if (hit) groups[hit].push(r); else sonstiges.push(r);
+  });
+
+  const COL = {
+    'Nur Handyfinanzierung':'#0ea5e9','Sprachbarrieren':'#8b5cf6','Shop Agent keine Lust':'#f59e0b',
+    'Zeitdruck / zu wenig Zeit':'#ef4444','Technischer Fehler / App-Problem':'#6366f1'
+  };
+
+  // Sortierte Übersicht der festen Gründe (nur die mit Treffern)
+  const summary = FIXED
+    .map(f => ({ label:f, count:groups[f].length, color:COL[f] }))
+    .filter(g => g.count > 0)
+    .sort((a,b) => b.count - a.count);
+
+  let h = '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">';
+  const maxC = Math.max(1, ...summary.map(g=>g.count), sonstiges.length);
+  summary.forEach(g => {
+    const pct = Math.round(g.count/maxC*100);
+    h += '<div class="arow"><div class="lbl" style="width:210px">'+esc(g.label)+'</div>' +
+      '<div class="track"><div style="width:'+pct+'%;background:'+g.color+'"></div></div>' +
+      '<div class="cnt" style="width:44px">'+g.count+'×</div></div>';
+  });
+  // Sonstiges als aufklappbarer Block
+  if (sonstiges.length){
+    const pct = Math.round(sonstiges.length/maxC*100);
+    h += '<div class="arow"><div class="lbl" style="width:210px">Sonstiges</div>' +
+      '<div class="track"><div style="width:'+pct+'%;background:#64748b"></div></div>' +
+      '<div class="cnt" style="width:44px">'+sonstiges.length+'×</div></div>';
+  }
+  h += '</div>';
+
+  // Sonstiges-Detail (immer sichtbar, da freitext = wichtig)
+  if (sonstiges.length){
+    h += '<div style="font-size:12px;font-weight:800;color:#64748b;margin:6px 0 8px">📝 Sonstiges im Detail ('+sonstiges.length+')</div>';
+    h += '<div class="reason-list">' + sonstiges.map(r =>
+      '<div class="reason-item"><div><div style="font-weight:700;font-size:13px;color:#0f172a">'+esc(r.user)+'</div>' +
+      '<div style="font-size:13px;color:#475569;margin-top:2px">'+esc(r.text)+'</div></div>' +
+      '<div style="font-size:11px;color:#94a3b8;white-space:nowrap;flex-shrink:0">'+fmtDate(r.ts)+'</div></div>'
+    ).join('') + '</div>';
+  }
+  box.innerHTML = h;
+}
+
+function fmtDate(ts){
+  try { const d=new Date(ts); return d.toLocaleDateString('de-DE')+' · '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}); }
+  catch(e){ return ''; }
+}
+
+function exportSkipCSV(){
+  
+  const reasons = SROWS()
+    .filter(r => inRange(r))
+    .filter(r => r.skipReasonText && String(r.skipReasonText).trim())
+    .map(r => ({ user:(r.user||'–').toString().trim(), ts:r.ts, text:String(r.skipReasonText).trim() }))
+    .sort((a,b) => new Date(b.ts) - new Date(a.ts));
+  const lines = [['Mitarbeiter','Datum','Grund'].join(';')];
+  reasons.forEach(r => lines.push([r.user, fmtDate(r.ts), '"'+r.text.replace(/"/g,'""')+'"'].join(';')));
+  const blob = new Blob(['\ufeff'+lines.join('\n')], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='Skip-Gruende_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click(); setTimeout(()=>URL.revokeObjectURL(url), 6000);
+}
+
+
+// Zeigt/versteckt die passenden Eingabefelder je nach Auswahl
+function onRangeChange(){
+  const v = document.getElementById('range').value;
+  document.getElementById('monthPick').style.display   = (v === 'month')  ? 'inline-block' : 'none';
+  document.getElementById('customRange').style.display = (v === 'custom') ? 'inline-flex'  : 'none';
+  // Sinnvolle Vorbelegung
+  if (v === 'month' && !document.getElementById('monthPick').value){
+    document.getElementById('monthPick').value = new Date().toISOString().slice(0,7);
+  }
+  if (v === 'custom'){
+    const f = document.getElementById('dateFrom'), t = document.getElementById('dateTo');
+    if (!t.value) t.value = new Date().toISOString().slice(0,10);
+    if (!f.value){ const d=new Date(); d.setDate(d.getDate()-7); f.value = d.toISOString().slice(0,10); }
+  }
+  renderStats();
+}
+
+// Liefert das aktuell gewählte Zeitfenster als {from, to} in ms (oder null = alles)
+function currentWindow(){
+  const v = (document.getElementById('range')||{}).value || '30';
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const endOfToday = startOfToday + 86400000 - 1;
+
+  if (v === 'today') return { from:startOfToday, to:endOfToday, label:'Heute' };
+  if (v === '0')     return null;
+  if (v === 'month'){
+    const mv = (document.getElementById('monthPick')||{}).value;
+    if (!mv) return null;
+    const [y,m] = mv.split('-').map(Number);
+    const from = new Date(y, m-1, 1).getTime();
+    const to   = new Date(y, m, 1).getTime() - 1;
+    return { from, to, label: new Date(y,m-1,1).toLocaleDateString('de-DE',{month:'long',year:'numeric'}) };
+  }
+  if (v === 'custom'){
+    const fv = (document.getElementById('dateFrom')||{}).value;
+    const tv = (document.getElementById('dateTo')||{}).value;
+    if (!fv || !tv) return null;
+    const from = new Date(fv+'T00:00:00').getTime();
+    const to   = new Date(tv+'T23:59:59').getTime();
+    return { from, to, label: new Date(fv).toLocaleDateString('de-DE')+' – '+new Date(tv).toLocaleDateString('de-DE') };
+  }
+  // Zahl = letzte N Tage
+  const days = parseInt(v,10) || 30;
+  return { from: Date.now() - days*86400000, to: Date.now()+1, label:'Letzte '+days+' Tage' };
+}
+
+function inRange(r){
+  const w = currentWindow();
+  if (!w) return true;               // "Alles"
+  const t = Date.parse(r.ts);
+  if (!Number.isFinite(t)) return false;
+  return t >= w.from && t <= w.to;
+}
+
+// ── Shop-Filter (v59) ──
+// Beratungen speichern jetzt shopId + shop (Name). Alte Datensätze haben das
+// nicht → wir behandeln sie als „ohne Shop“ und zeigen sie unter „Alle Shops“.
+function shopIdOf(r){
+  const id = (r.shopId || '').toString().trim().toLowerCase();
+  if (id) return id;
+  // Fallback: aus dem Namen ableiten (Alt-Daten)
+  const nm = (r.shop || '').toString().trim().toLowerCase();
+  if (!nm || nm === 'telekom') return '';   // 'Telekom' war der alte Platzhalter → als „ohne“ werten
+  return nm.replace(/^o2 shop /,'').replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+}
+function shopNameOf(r){
+  const nm = (r.shop || '').toString().trim();
+  if (nm && nm.toLowerCase() !== 'telekom') return nm;
+  return '(ohne Shop-Zuordnung)';
+}
+function currentShopFilter(){ return (document.getElementById('shopFilter')||{}).value || '__all__'; }
+function currentEmpFilter(){ return (document.getElementById('empFilter')||{}).value || '__all__'; }
+function matchesShop(r){
+  const f = currentShopFilter();
+  if (f === '__all__') return true;
+  if (f === '__none__') return shopIdOf(r) === '';
+  return shopIdOf(r) === f;
+}
+function matchesEmp(r){
+  const e = currentEmpFilter();
+  if (e === '__all__') return true;
+  return (r.user||'').toString().trim() === e;
+}
+// Zentrale Zeilen-Quelle: Shop UND Mitarbeiter berücksichtigt
+function SROWS(){ return rows.filter(r => matchesShop(r) && matchesEmp(r)); }
+// Nur nach Shop (für Mitarbeiter-Dropdown – zeigt alle des Shops)
+function shopRows(){ return rows.filter(matchesShop); }
+
+// Mitarbeiter-Dropdown (oben) – Mitarbeiter des gewählten Shops
+function fillEmpDropdown(){
+  const sel = document.getElementById('empFilter');
+  if (!sel) return;
+  const cur = sel.value || '__all__';
+  const agents = [...new Set(shopRows().map(r => (r.user||'').toString().trim()).filter(u => u && u !== '–' && u !== 'Unbekannt'))].sort();
+  sel.innerHTML = '<option value="__all__">Alle Mitarbeiter</option>' + agents.map(a => '<option value="'+esc(a)+'">'+esc(a)+'</option>').join('');
+  // Auswahl behalten, falls Mitarbeiter im neuen Shop existiert – sonst auf „Alle“
+  sel.value = (cur === '__all__' || agents.includes(cur)) ? cur : '__all__';
+}
+
+// Shop gewechselt → Mitarbeiterliste neu aufbauen, dann alles rendern
+function onShopChange(){
+  fillEmpDropdown();
+  renderAll();
+}
+
+function fillShopDropdown(){
+  const sel = document.getElementById('shopFilter');
+  if (!sel) return;
+  const cur = sel.value || '__all__';
+  // Alle vorkommenden Shops aus den Daten
+  const map = {};
+  rows.forEach(r => { const id = shopIdOf(r); if (id) map[id] = shopNameOf(r); });
+  const entries = Object.entries(map).sort((a,b)=>a[1].localeCompare(b[1]));
+  const hasNone = rows.some(r => shopIdOf(r) === '');
+  let html = '<option value="__all__">Alle Shops</option>';
+  entries.forEach(([id,name]) => { html += '<option value="'+esc(id)+'">'+esc(name)+'</option>'; });
+  if (hasNone) html += '<option value="__none__">(ohne Shop-Zuordnung)</option>';
+  sel.innerHTML = html;
+  sel.value = cur;
+}
+
+// Neu rendern (Shop-Wechsel wirkt auf alles)
+function renderAll(){
+  const sel = document.getElementById('shopFilter');
+  const info = document.getElementById('shopInfo');
+  if (info){
+    const n = SROWS().length;
+    const label = sel && sel.selectedOptions[0] ? sel.selectedOptions[0].textContent : 'Alle Shops';
+    info.textContent = '· ' + n + ' Beratungen';
+  }
+  renderStats(); renderCoaching(); renderSkip();
+}
+
+function normProv(p){
+  const s = (p||'').toString().trim();
+  if (!s) return '';
+  const l = s.toLowerCase();
+  if (l === 'o2' || l === 'o₂') return 'O2';
+  if (l.startsWith('telekom')) return 'Telekom';
+  if (l.startsWith('vodafone')) return 'Vodafone';
+  if (l === '1&1' || l.startsWith('1und1') || l.startsWith('1&1')) return '1&1';
+  return s;
+}
+const PROV_COLOR = { 'Telekom':'#e20074', 'Vodafone':'#e60000', 'O2':'#0019a5', '1&1':'#004b93' };
+
+function renderStats(){
+  const w = currentWindow();
+  const ri = document.getElementById('rangeInfo');
+  if (ri) ri.textContent = w ? ('📅 ' + w.label) : '📅 Gesamter Zeitraum';
+  const f = SROWS().filter(r => inRange(r));
+
+  // KPIs
+  const total = f.length;
+  const abschluss = f.filter(r => r.result === 'Abschluss').length;
+  const quote = total ? Math.round(abschluss / total * 100) : 0;
+  const agents = new Set(f.map(r => r.user).filter(u => u && u !== '–')).size;
+
+  document.getElementById('kpis').innerHTML =
+    kpi('Beratungen', total, '', '#0f172a') +
+    kpi('Abschlüsse', abschluss, '', '#16a34a') +
+    kpi('Abschlussquote', quote + '%', '', quote >= 30 ? '#16a34a' : quote >= 15 ? '#f59e0b' : '#dc2626') +
+    kpi('Aktive Mitarbeiter', agents, '', '#2563eb');
+
+  // DSL
+  const byP = {};
+  let mitAnb = 0, mitBed = 0;
+  f.forEach(r => {
+    const p = normProv(r.dslProvider);
+    if (!p) return;
+    mitAnb++;
+    if (!byP[p]) byP[p] = { p, total:0, bedarf:0 };
+    byP[p].total++;
+    if (r.dslBedarf === 'ja'){ byP[p].bedarf++; mitBed++; }
+  });
+  const list = Object.values(byP).sort((a,b) => b.total - a.total);
+
+  const dslBox = document.getElementById('dsl');
+  if (!list.length){
+    dslBox.innerHTML = '<div class="empty">Noch keine Anbieter-Daten. Wird ab der nächsten Beratung erfasst.</div>';
+  } else {
+    let h = '<div style="font-size:13px;color:#64748b;margin-bottom:14px">Bei <b style="color:#0f172a">' + mitAnb +
+            '</b> Beratungen wurde der Anbieter erfasst – davon <b style="color:#2563eb">' + mitBed +
+            '</b>× mit DSL-Angebot (' + (mitAnb ? Math.round(mitBed/mitAnb*100) : 0) + '%).</div>' +
+            '<table><tr><th>Anbieter</th><th>Anteil</th><th style="text-align:right">DSL-Angebot gemacht</th></tr>';
+    list.forEach(p => {
+      const pct = Math.round(p.total / mitAnb * 100);
+      const q = p.total ? Math.round(p.bedarf / p.total * 100) : 0;
+      const c = PROV_COLOR[p.p] || '#64748b';
+      h += '<tr>' +
+        '<td style="font-weight:800;color:' + c + '">' + esc(p.p) + '</td>' +
+        '<td><div class="bar"><div style="width:' + pct + '%;background:' + c + ';opacity:.85"></div>' +
+          '<span style="color:' + (pct > 25 ? '#fff' : '#475569') + '">' + p.total + '× (' + pct + '%)</span></div></td>' +
+        '<td style="text-align:right;font-weight:800;color:' + (q >= 50 ? '#16a34a' : '#94a3b8') + '">' + p.bedarf + '× (' + q + '%)</td>' +
+      '</tr>';
+    });
+    dslBox.innerHTML = h + '</table>';
+  }
+
+  // Mitarbeiter
+  const byA = {};
+  f.forEach(r => {
+    const u = r.user || '–';
+    if (u === '–') return;
+    if (!byA[u]) byA[u] = { u, total:0, ab:0 };
+    byA[u].total++;
+    if (r.result === 'Abschluss') byA[u].ab++;
+  });
+  const al = Object.values(byA).sort((a,b) => b.total - a.total);
+  const aBox = document.getElementById('agents');
+  if (!al.length){
+    aBox.innerHTML = '<div class="empty">Keine Daten im gewählten Zeitraum.</div>';
+  } else {
+    let h = '<table><tr><th>Mitarbeiter</th><th>Beratungen</th><th>Abschlüsse</th><th style="text-align:right">Quote</th></tr>';
+    al.forEach(a => {
+      const q = a.total ? Math.round(a.ab / a.total * 100) : 0;
+      h += '<tr>' +
+        '<td style="font-weight:700">' + esc(a.u) + '</td>' +
+        '<td>' + a.total + '</td>' +
+        '<td style="color:#16a34a;font-weight:700">' + a.ab + '</td>' +
+        '<td style="text-align:right;font-weight:800;color:' + (q >= 30 ? '#16a34a' : q >= 15 ? '#f59e0b' : '#94a3b8') + '">' + q + '%</td>' +
+      '</tr>';
+    });
+    aBox.innerHTML = h + '</table>';
+  }
+
+  // Zeitraumwechsel wirkt auch auf Coaching & Skip-Gründe
+  try { renderCoaching(); } catch(e){}
+  try { renderSkip(); } catch(e){}
+}
+
+function kpi(l, v, s, c){
+  return '<div class="kpi"><div class="lbl">' + l + '</div>' +
+         '<div class="val" style="color:' + c + '">' + v + '</div>' +
+         (s ? '<div class="sub">' + s + '</div>' : '') + '</div>';
+}
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+</script>
+</body>
+</html>
