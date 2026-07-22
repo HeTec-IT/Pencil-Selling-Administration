@@ -162,6 +162,7 @@
       <span id="rangeInfo" style="font-size:11.5px;color:#94a3b8;font-weight:600"></span>
     </div>
     <div class="kpis" id="kpis"><div class="empty" style="grid-column:1/-1">Lade Daten…</div></div>
+    <div id="exemptInfo"></div>
   </div>
 
   <!-- DSL -->
@@ -197,8 +198,12 @@
     <h2>⏭️ Skip-Limits &amp; Gründe</h2>
     <div class="hint">
       Übersprungene Beratungen je Mitarbeiter diesen Monat. Jeder übersprungene Vorgang zählt +1.
+      Über <b>Aktionen</b> kannst du das Limit hochsetzen, den Zähler auf 0 zurücksetzen oder
+      alle Vorgänge eines Mitarbeiters löschen. Hat ein Mitarbeiter sein Limit erreicht, ist
+      „Überspringen" im Pencil Selling gesperrt, bis Limit &gt; Zähler ist.
       Darunter die digital erfassten Gründe – wichtig, um Muster zu erkennen (z.&nbsp;B. „zu wenig Zeit“).
     </div>
+    <div id="skipMsg"></div>
     <div id="skipTable"><div class="empty">Lade Daten…</div></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin:22px 0 10px">
       <div style="font-size:13px;font-weight:900;color:#0f172a">📋 Digitale Skip-Gründe <span id="skipReasonCount" style="color:#94a3b8;font-weight:700"></span></div>
@@ -422,12 +427,12 @@ window.addEventListener('beforeunload', (e) => {
 async function loadStats(){
   try {
     const snap = await db.collection('analytics').orderBy('ts','desc').limit(3000).get();
-    rows = snap.docs.map(d => d.data());
+    rows = snap.docs.map(d => Object.assign({ __id:d.id, __col:'analytics' }, d.data()));
   } catch(e){
     // Fallback: manche Setups nutzen andere Collection-Namen
     try {
       const snap2 = await db.collection('rows').limit(3000).get();
-      rows = snap2.docs.map(d => d.data());
+      rows = snap2.docs.map(d => Object.assign({ __id:d.id, __col:'rows' }, d.data()));
     } catch(e2){ rows = []; }
   }
   await loadSkipLimits();
@@ -452,6 +457,113 @@ const COST_KEYS = [
 ];
 
 let skipData = {};   // { agent: {count, limit} }
+let skipAgents = []; // Reihenfolge in der Tabelle (für Buttons)
+
+function skipMsg(text, ok){
+  const m = document.getElementById('skipMsg');
+  if (!m) return;
+  m.className = 'msg ' + (ok ? 'ok' : 'err');
+  m.style.marginBottom = '14px';
+  m.textContent = text;
+  setTimeout(() => { m.textContent = ''; m.className = ''; }, 8000);
+}
+
+// ── Limit hochsetzen (oder runter) ──
+async function setLimit(i){
+  const a = skipAgents[i]; if (!a) return;
+  const inp = document.getElementById('lim_'+i);
+  const v = parseInt(inp && inp.value, 10);
+  if (!Number.isFinite(v) || v < 0){ skipMsg('❌ Ungültiges Limit.', false); return; }
+  try {
+    await db.collection('skip_limits').doc('limit_'+a).set({
+      max_limit: v,
+      user: a,
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+    skipData[a].limit = v;
+    renderSkip();
+    skipMsg('✅ Limit für ' + a + ' auf ' + v + ' gesetzt. Gilt sofort beim nächsten Überspringen-Versuch.', true);
+  } catch(e){ skipMsg('❌ Fehler: ' + e.message, false); }
+}
+
+// ── Mitarbeiter komplett freischalten / wieder sperren ──
+async function toggleExempt(i){
+  const a = skipAgents[i]; if (!a) return;
+  const neu = !skipData[a].exempt;
+  const txt = neu
+    ? '"' + a + '" komplett freischalten?\n\n' +
+      '• Unbegrenzt überspringen (ohne Grund-Abfrage)\n' +
+      '• Skips werden nicht mehr gezählt\n' +
+      '• Beratungen zählen nicht in KPIs, Quoten und Coaching\n' +
+      '  (bleiben aber in der Mitarbeiter-Tabelle sichtbar)'
+    : 'Freischaltung von "' + a + '" aufheben?\n\nEr zählt danach wieder ganz normal in die Wertung.';
+  if (!confirm(txt)) return;
+  try {
+    await db.collection('skip_limits').doc('limit_'+a).set({
+      exempt: neu,
+      max_limit: skipData[a].limit || 15,
+      user: a, agent: a,
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+    skipData[a].exempt = neu;
+    renderAll();
+    skipMsg(neu
+      ? '✅ ' + a + ' ist freigeschaltet – unbegrenzt skippen, außer Wertung.'
+      : '✅ Freischaltung von ' + a + ' aufgehoben – zählt wieder normal.', true);
+  } catch(e){ skipMsg('❌ Fehler: ' + e.message, false); }
+}
+
+// ── Skip-Zähler des aktuellen Monats auf 0 ──
+async function resetSkip(i){
+  const a = skipAgents[i]; if (!a) return;
+  if (!confirm('Skip-Zähler von "' + a + '" für diesen Monat auf 0 zurücksetzen?')) return;
+  try {
+    await db.collection('skip_limits').doc('skip_'+a+'_'+monthKey()).set({
+      count: 0,
+      user: a,
+      month: monthKey(),
+      resetAt: new Date().toISOString()
+    }, { merge: true });
+    skipData[a].count = 0;
+    renderSkip();
+    skipMsg('✅ Zähler von ' + a + ' steht wieder auf 0 – Überspringen ist wieder möglich.', true);
+  } catch(e){ skipMsg('❌ Fehler: ' + e.message, false); }
+}
+
+// ── ALLE Vorgänge (analytics) eines Mitarbeiters löschen ──
+async function delAgentRows(i){
+  const a = skipAgents[i]; if (!a) return;
+  const eigene = rows.filter(r => (r.user||'').toString().trim() === a);
+  if (!eigene.length){ skipMsg('Keine Vorgänge von ' + a + ' gefunden.', false); return; }
+  const sicher = prompt(
+    '⚠️ ACHTUNG: Es werden ' + eigene.length + ' Vorgänge von "' + a + '" ENDGÜLTIG gelöscht\n' +
+    '(Beratungen, Statistik, Coaching-Daten, Skip-Gründe).\n\n' +
+    'Zum Bestätigen bitte LÖSCHEN eintippen:'
+  );
+  if (sicher !== 'LÖSCHEN'){ skipMsg('Abgebrochen – nichts gelöscht.', false); return; }
+  try {
+    // Zusätzlich direkt in Firestore nach user suchen (falls mehr als die geladenen 3000 Zeilen)
+    const ids = new Map();
+    eigene.forEach(r => { if (r.__id) ids.set(r.__id, r.__col || 'analytics'); });
+    try {
+      const snap = await db.collection('analytics').where('user','==',a).get();
+      snap.docs.forEach(d => ids.set(d.id, 'analytics'));
+    } catch(_){}
+    // In Batches à 400 löschen
+    const entries = [...ids.entries()];
+    for (let s = 0; s < entries.length; s += 400){
+      const batch = db.batch();
+      entries.slice(s, s+400).forEach(([id,col]) => batch.delete(db.collection(col).doc(id)));
+      await batch.commit();
+    }
+    // Lokal entfernen und alles neu aufbauen
+    rows = rows.filter(r => (r.user||'').toString().trim() !== a);
+    fillShopDropdown();
+    fillEmpDropdown();
+    renderAll();
+    skipMsg('✅ ' + entries.length + ' Vorgänge von ' + a + ' gelöscht.', true);
+  } catch(e){ skipMsg('❌ Fehler beim Löschen: ' + e.message, false); }
+}
 
 function monthKey(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
 
@@ -460,11 +572,21 @@ async function loadSkipLimits(){
   const agents = [...new Set(rows.map(r => (r.user||'').toString().trim()).filter(u => u && u !== '–' && u !== 'Unbekannt'))];
   const mk = monthKey();
   for (const a of agents){
-    let count = 0, limit = 15;
+    let count = 0, limit = 15, exempt = false;
     try { const c = await db.collection('skip_limits').doc('skip_'+a+'_'+mk).get(); if (c.exists) count = c.data().count || 0; } catch(_){}
-    try { const l = await db.collection('skip_limits').doc('limit_'+a).get(); if (l.exists) limit = l.data().max_limit || 15; } catch(_){}
-    skipData[a] = { count, limit };
+    try { const l = await db.collection('skip_limits').doc('limit_'+a).get(); if (l.exists){ limit = l.data().max_limit || 15; exempt = l.data().exempt === true; } } catch(_){}
+    skipData[a] = { count, limit, exempt };
   }
+}
+
+// Namen aller freigeschalteten Mitarbeiter
+function exemptAgents(){
+  return new Set(Object.keys(skipData).filter(a => skipData[a] && skipData[a].exempt));
+}
+// Ist diese Beratungszeile aus der Wertung ausgenommen?
+function isExemptRow(r){
+  if (r && r.exempt === true) return true;                 // beim Speichern markiert (neue Daten)
+  return exemptAgents().has((r && r.user || '').toString().trim());  // Fallback über Namen (Alt-Daten)
 }
 
 // Balkenzeile bauen
@@ -476,14 +598,20 @@ function abar(label, count, total, color){
 }
 
 function renderCoaching(){
-  // Folgt dem globalen Shop- + Mitarbeiter-Filter (SROWS)
-  const f = SROWS().filter(r => inRange(r));
+  // Folgt dem globalen Shop- + Mitarbeiter-Filter.
+  // Freigeschaltete Mitarbeiter zählen nicht in die Analyse – ES SEI DENN,
+  // es ist gezielt genau dieser Mitarbeiter oben ausgewählt (dann will man ihn ja sehen).
+  const emp = currentEmpFilter();
+  const einzeln = (emp !== '__all__');
+  const f = (einzeln ? SROWS() : WROWS()).filter(r => inRange(r));
   const total = f.length;
   // Scope-Hinweis
   const sc = document.getElementById('coachScope');
   if (sc){
-    const emp = currentEmpFilter();
-    sc.textContent = emp === '__all__' ? '👥 Alle Mitarbeiter' : '👤 ' + emp;
+    const exSel = einzeln && exemptAgents().has(emp);
+    sc.textContent = einzeln
+      ? ('👤 ' + emp + (exSel ? '  ·  freigeschaltet (sonst außer Wertung)' : ''))
+      : '👥 Alle Mitarbeiter (ohne freigeschaltete)';
   }
 
   const used = (key) => f.filter(r => { const cs = r.canvasStats||{}; return cs[key] && cs[key].used; }).length;
@@ -548,19 +676,37 @@ function renderSkip(){
   const shopAgents = new Set(SROWS().map(r => (r.user||'').toString().trim()).filter(u => u && u !== '–' && u !== 'Unbekannt'));
   const noFilter = currentShopFilter() === '__all__' && currentEmpFilter() === '__all__';
   const agents = Object.keys(skipData).filter(a => noFilter || shopAgents.has(a)).sort();
+  skipAgents = agents;   // Reihenfolge merken für die Aktions-Buttons
   const tbl = document.getElementById('skipTable');
   if (!agents.length){ tbl.innerHTML = '<div class="empty">Keine Mitarbeiterdaten für diesen Shop.</div>'; }
   else {
-    let h = '<table><tr><th>Mitarbeiter</th><th>Übersprungen (Monat)</th><th>Limit</th><th style="text-align:right">Auslastung</th></tr>';
-    agents.forEach(a => {
+    let h = '<table><tr><th>Mitarbeiter</th><th>Übersprungen (Monat)</th><th>Limit</th><th style="text-align:right">Auslastung</th><th style="text-align:right">Aktionen</th></tr>';
+    agents.forEach((a, i) => {
       const d = skipData[a];
       const pct = d.limit ? Math.round(d.count/d.limit*100) : 0;
       const col = pct >= 90 ? '#dc2626' : pct >= 60 ? '#f59e0b' : '#16a34a';
-      h += '<tr>' +
-        '<td style="font-weight:700">'+esc(a)+'</td>' +
-        '<td><span class="skipbadge" style="background:'+(pct>=90?'#fef2f2':pct>=60?'#fffbeb':'#f0fdf4')+';color:'+col+'">'+d.count+' / '+d.limit+'</span></td>' +
-        '<td style="color:#94a3b8">'+d.limit+'</td>' +
-        '<td style="text-align:right;font-weight:800;color:'+col+'">'+pct+'%</td>' +
+      const gesperrt = !d.exempt && d.count >= d.limit;
+      h += '<tr' + (d.exempt ? ' style="background:#f8fafc"' : '') + '>' +
+        '<td style="font-weight:700">'+esc(a)+
+          (d.exempt ? ' <span class="skipbadge" style="background:#eff6ff;color:#2563eb">🔓 freigeschaltet</span>' : '') +
+          (gesperrt ? ' <span class="skipbadge" style="background:#fef2f2;color:#dc2626">🔒 gesperrt</span>' : '') +'</td>' +
+        (d.exempt
+          ? '<td colspan="3" style="color:#94a3b8;font-size:12.5px;font-weight:600">unbegrenzt · Skips zählen nicht · außer Wertung</td>'
+          : '<td><span class="skipbadge" style="background:'+(pct>=90?'#fef2f2':pct>=60?'#fffbeb':'#f0fdf4')+';color:'+col+'">'+d.count+' / '+d.limit+'</span></td>' +
+            '<td style="color:#94a3b8">'+d.limit+'</td>' +
+            '<td style="text-align:right;font-weight:800;color:'+col+'">'+pct+'%</td>') +
+        '<td style="text-align:right;white-space:nowrap">' +
+          (d.exempt ? '' :
+            '<input type="number" id="lim_'+i+'" value="'+d.limit+'" min="0" max="999" ' +
+              'style="width:64px;padding:6px 8px;font-size:13px;font-weight:700;text-align:center;display:inline-block">' +
+            ' <button class="btn btn-ghost btn-sm" onclick="setLimit('+i+')" title="Neues Limit speichern">💾 Limit</button>' +
+            ' <button class="btn btn-ghost btn-sm" onclick="resetSkip('+i+')" title="Skip-Zähler dieses Monats auf 0 setzen">↺ Zähler 0</button> ') +
+          '<button class="btn btn-ghost btn-sm" onclick="toggleExempt('+i+')" ' +
+            'style="'+(d.exempt?'background:#eff6ff;color:#2563eb;border-color:#bfdbfe':'')+'" ' +
+            'title="'+(d.exempt?'Freischaltung aufheben – zählt wieder normal':'Komplett freischalten – unbegrenzt skippen, außer Wertung')+'">' +
+            (d.exempt ? '↩ Sperren' : '🔓 Freischalten') + '</button>' +
+          ' <button class="btn btn-danger btn-sm" onclick="delAgentRows('+i+')" title="ALLE Vorgänge dieses Mitarbeiters löschen">🗑 Vorgänge</button>' +
+        '</td>' +
       '</tr>';
     });
     tbl.innerHTML = h + '</table>';
@@ -569,6 +715,7 @@ function renderSkip(){
   // Digitale Gründe (aus analytics: skipReasonText) – GRUPPIERT
   const reasons = SROWS()
     .filter(r => inRange(r))
+    .filter(r => !isExemptRow(r))          // Freigeschaltete tauchen hier nicht auf
     .filter(r => r.skipReasonText && String(r.skipReasonText).trim())
     .map(r => ({ user:(r.user||'–').toString().trim(), ts:r.ts, text:String(r.skipReasonText).trim() }))
     .sort((a,b) => new Date(b.ts) - new Date(a.ts));
@@ -636,6 +783,7 @@ function exportSkipCSV(){
   
   const reasons = SROWS()
     .filter(r => inRange(r))
+    .filter(r => !isExemptRow(r))          // Freigeschaltete tauchen hier nicht auf
     .filter(r => r.skipReasonText && String(r.skipReasonText).trim())
     .map(r => ({ user:(r.user||'–').toString().trim(), ts:r.ts, text:String(r.skipReasonText).trim() }))
     .sort((a,b) => new Date(b.ts) - new Date(a.ts));
@@ -734,6 +882,10 @@ function matchesEmp(r){
 }
 // Zentrale Zeilen-Quelle: Shop UND Mitarbeiter berücksichtigt
 function SROWS(){ return rows.filter(r => matchesShop(r) && matchesEmp(r)); }
+// v54: Zeilen für die WERTUNG – freigeschaltete Mitarbeiter (Vertriebsleiter) fliegen raus.
+// Sie bleiben sichtbar (eigene Zeile in der Mitarbeiter-Tabelle), zählen aber nicht
+// in KPIs, Quoten, DSL-Auswertung und Coaching-Analyse.
+function WROWS(){ return SROWS().filter(r => !isExemptRow(r)); }
 // Nur nach Shop (für Mitarbeiter-Dropdown – zeigt alle des Shops)
 function shopRows(){ return rows.filter(matchesShop); }
 
@@ -798,7 +950,9 @@ function renderStats(){
   const w = currentWindow();
   const ri = document.getElementById('rangeInfo');
   if (ri) ri.textContent = w ? ('📅 ' + w.label) : '📅 Gesamter Zeitraum';
-  const f = SROWS().filter(r => inRange(r));
+  const f = WROWS().filter(r => inRange(r));
+  const fAll = SROWS().filter(r => inRange(r));           // inkl. Freigeschaltete (nur zur Anzeige)
+  const exCount = fAll.length - f.length;
 
   // KPIs
   const total = f.length;
@@ -811,6 +965,16 @@ function renderStats(){
     kpi('Abschlüsse', abschluss, '', '#16a34a') +
     kpi('Abschlussquote', quote + '%', '', quote >= 30 ? '#16a34a' : quote >= 15 ? '#f59e0b' : '#dc2626') +
     kpi('Aktive Mitarbeiter', agents, '', '#2563eb');
+
+  // Hinweis: wie viele Beratungen aus der Wertung genommen wurden
+  const exBox = document.getElementById('exemptInfo');
+  if (exBox){
+    exBox.innerHTML = exCount
+      ? '<div style="margin-top:12px;padding:10px 14px;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:11px;font-size:12.5px;color:#1e40af;font-weight:600">' +
+        'ℹ️ <b>' + exCount + '</b> Beratung(en) von freigeschalteten Mitarbeitern sind <b>nicht</b> in KPIs, Quoten und Coaching-Analyse eingerechnet. ' +
+        'In der Mitarbeiter-Tabelle unten sind sie weiterhin sichtbar (grau markiert).</div>'
+      : '';
+  }
 
   // DSL
   const byP = {};
@@ -847,16 +1011,17 @@ function renderStats(){
     dslBox.innerHTML = h + '</table>';
   }
 
-  // Mitarbeiter
+  // Mitarbeiter – Freigeschaltete werden angezeigt, aber als „außer Wertung" markiert
   const byA = {};
-  f.forEach(r => {
+  fAll.forEach(r => {
     const u = r.user || '–';
     if (u === '–') return;
-    if (!byA[u]) byA[u] = { u, total:0, ab:0 };
+    if (!byA[u]) byA[u] = { u, total:0, ab:0, ex:isExemptRow(r) };
     byA[u].total++;
     if (r.result === 'Abschluss') byA[u].ab++;
   });
-  const al = Object.values(byA).sort((a,b) => b.total - a.total);
+  // Gewertete zuerst (nach Beratungen), Freigeschaltete unten dran
+  const al = Object.values(byA).sort((a,b) => (a.ex?1:0)-(b.ex?1:0) || b.total - a.total);
   const aBox = document.getElementById('agents');
   if (!al.length){
     aBox.innerHTML = '<div class="empty">Keine Daten im gewählten Zeitraum.</div>';
@@ -864,12 +1029,23 @@ function renderStats(){
     let h = '<table><tr><th>Mitarbeiter</th><th>Beratungen</th><th>Abschlüsse</th><th style="text-align:right">Quote</th></tr>';
     al.forEach(a => {
       const q = a.total ? Math.round(a.ab / a.total * 100) : 0;
-      h += '<tr>' +
-        '<td style="font-weight:700">' + esc(a.u) + '</td>' +
-        '<td>' + a.total + '</td>' +
-        '<td style="color:#16a34a;font-weight:700">' + a.ab + '</td>' +
-        '<td style="text-align:right;font-weight:800;color:' + (q >= 30 ? '#16a34a' : q >= 15 ? '#f59e0b' : '#94a3b8') + '">' + q + '%</td>' +
-      '</tr>';
+      if (a.ex){
+        // außer Wertung: grau, mit Badge – Zahlen trotzdem sichtbar
+        h += '<tr style="background:#f8fafc;color:#94a3b8">' +
+          '<td style="font-weight:700;color:#64748b">' + esc(a.u) +
+            ' <span class="skipbadge" style="background:#eff6ff;color:#2563eb">außer Wertung</span></td>' +
+          '<td>' + a.total + '</td>' +
+          '<td>' + a.ab + '</td>' +
+          '<td style="text-align:right;font-weight:700">' + q + '%</td>' +
+        '</tr>';
+      } else {
+        h += '<tr>' +
+          '<td style="font-weight:700">' + esc(a.u) + '</td>' +
+          '<td>' + a.total + '</td>' +
+          '<td style="color:#16a34a;font-weight:700">' + a.ab + '</td>' +
+          '<td style="text-align:right;font-weight:800;color:' + (q >= 30 ? '#16a34a' : q >= 15 ? '#f59e0b' : '#94a3b8') + '">' + q + '%</td>' +
+        '</tr>';
+      }
     });
     aBox.innerHTML = h + '</table>';
   }
