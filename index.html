@@ -5,100 +5,169 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pencil Selling Administration</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 <style>
+  :root{
+    --bg:#F3F4F9; --surface:#FFFFFF; --surface-2:#F8F9FC; --border:#E3E5EF;
+    --ink:#14162B; --body:#454866; --muted:#8A8DA6;
+    --sidebar:#14162B; --sidebar-text:#9498B8; --sidebar-text-on:#FFFFFF; --sidebar-border:#23253F;
+    --accent:#5B5FEF; --accent-ink:#4245C4; --accent-soft:#ECECFC;
+    --warn:#C8790A; --warn-soft:#FBF1DE;
+    --good:#1E8E5A; --good-soft:#E6F5EC;
+    --bad:#C23B3B; --bad-soft:#FBEAEA;
+    --r-lg:16px; --r-md:12px; --r-sm:9px;
+    --shadow:0 1px 2px rgba(20,22,43,.05), 0 10px 26px -14px rgba(20,22,43,.16);
+  }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Inter',-apple-system,system-ui,sans-serif;background:#f1f5f9;color:#0f172a;min-height:100vh}
-  .wrap{max-width:1080px;margin:0 auto;padding:20px 16px 60px}
+  html,body{height:100%}
+  body{font-family:'Inter',-apple-system,system-ui,sans-serif;background:var(--bg);color:var(--body);min-height:100vh;-webkit-font-smoothing:antialiased}
+  h1,h2,h3{font-family:'Manrope','Inter',sans-serif;color:var(--ink)}
+  ::selection{background:var(--accent-soft);color:var(--accent-ink)}
 
-  /* Login */
-  #login{position:fixed;inset:0;background:linear-gradient(135deg,#1e3a8a,#2563eb);display:flex;align-items:center;justify-content:center;padding:20px;z-index:100}
-  .loginbox{background:#fff;border-radius:22px;padding:34px 30px;width:100%;max-width:380px;box-shadow:0 25px 70px rgba(0,0,0,.35);text-align:center}
-  .loginbox h1{font-size:21px;font-weight:900;margin-bottom:6px}
-  .loginbox p{font-size:13px;color:#64748b;margin-bottom:22px}
-  input[type=password],input[type=text],input[type=date],textarea{width:100%;padding:13px 15px;font-size:15px;border:2px solid #e2e8f0;border-radius:12px;outline:none;font-family:inherit;transition:border-color .15s}
-  input:focus,textarea:focus{border-color:#2563eb}
-  .btn{padding:13px 20px;border:none;border-radius:12px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;font-weight:800;font-size:15px;cursor:pointer;font-family:inherit;transition:transform .1s,box-shadow .15s;box-shadow:0 4px 14px rgba(37,99,235,.3)}
-  .btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(37,99,235,.4)}
-  .btn:active{transform:translateY(0)}
-  .btn:disabled{background:#cbd5e1;box-shadow:none;cursor:not-allowed;transform:none}
-  .btn-ghost{background:#f8fafc;color:#475569;border:1.5px solid #e2e8f0;box-shadow:none;font-weight:700}
-  .btn-ghost:hover{background:#f1f5f9;box-shadow:none}
-  .btn-danger{background:#fef2f2;color:#dc2626;border:1.5px solid #fecaca;box-shadow:none}
+  /* ══ Login ══ */
+  #login{position:fixed;inset:0;background:radial-gradient(120% 120% at 15% 10%,#23264a 0%,var(--sidebar) 55%,#0c0d1c 100%);display:flex;align-items:center;justify-content:center;padding:20px;z-index:100}
+  .loginbox{background:var(--surface);border-radius:20px;padding:36px 32px;width:100%;max-width:380px;box-shadow:0 30px 80px rgba(0,0,0,.45);text-align:left}
+  .loginbox .mark{width:44px;height:44px;border-radius:12px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:16px;color:#fff}
+  .loginbox h1{font-size:20px;font-weight:800;margin-bottom:3px;letter-spacing:-.01em}
+  .loginbox p{font-size:13px;color:var(--muted);margin-bottom:24px}
+  input[type=password],input[type=text],input[type=date],input[type=month],textarea{width:100%;padding:12px 14px;font-size:14.5px;border:1.5px solid var(--border);border-radius:var(--r-md);outline:none;font-family:inherit;color:var(--ink);background:var(--surface);transition:border-color .15s,box-shadow .15s}
+  input:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .btn{padding:12px 18px;border:none;border-radius:var(--r-md);background:var(--accent);color:#fff;font-weight:700;font-size:14.5px;cursor:pointer;font-family:inherit;transition:background .15s,transform .1s}
+  .btn:hover{background:var(--accent-ink)}
+  .btn:active{transform:translateY(1px)}
+  .btn:disabled{background:#C9CBDB;cursor:not-allowed;transform:none}
+  .btn-ghost{background:var(--surface-2);color:var(--body);border:1.5px solid var(--border);font-weight:700}
+  .btn-ghost:hover{background:#EFF0F6}
+  .btn-danger{background:var(--bad-soft);color:var(--bad);border:1.5px solid #F3CFCF}
+  .btn-danger:hover{background:#F7DEDE}
   .btn-sm{padding:8px 13px;font-size:13px}
 
-  /* Header */
-  header{background:#fff;border-radius:18px;padding:20px 22px;margin-bottom:18px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 10px rgba(15,23,42,.06)}
-  .logo{width:46px;height:46px;border-radius:13px;background:linear-gradient(135deg,#2563eb,#1d4ed8);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
-  header h1{font-size:19px;font-weight:900;letter-spacing:-.01em}
-  header .sub{font-size:12.5px;color:#64748b;margin-top:2px}
+  /* ══ Shell: Sidebar + Main ══ */
+  #app{display:flex;min-height:100vh}
+  .sidebar{width:248px;flex-shrink:0;background:var(--sidebar);display:flex;flex-direction:column;padding:22px 14px;position:sticky;top:0;height:100vh}
+  .sidebar .brand{display:flex;align-items:center;gap:10px;padding:6px 8px 22px}
+  .sidebar .brand .mark{width:34px;height:34px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+  .sidebar .brand .name{font-family:'Manrope',sans-serif;font-weight:800;font-size:14px;color:#fff;line-height:1.25}
+  .sidebar .brand .sub{font-size:11px;color:var(--sidebar-text)}
+  .navsec{font-size:10px;font-weight:800;color:#5A5E82;text-transform:uppercase;letter-spacing:.08em;margin:14px 10px 8px}
+  .tabbtn{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 12px;border:none;border-radius:var(--r-md);background:transparent;color:var(--sidebar-text);font-weight:700;font-size:13.5px;cursor:pointer;font-family:inherit;transition:background .12s,color .12s;margin-bottom:2px}
+  .tabbtn:hover{background:#1D2040;color:#fff}
+  .tabbtn.on{background:var(--accent);color:#fff}
+  .tabbtn .ico{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+  .tabbtn .lbl{flex:1}
+  .navbadge{background:var(--warn);color:#fff;font-size:10.5px;font-weight:800;padding:1px 7px;border-radius:999px;flex-shrink:0}
+  .sidebar .foot{margin-top:auto;padding:10px 8px 0}
+  .sidebar .foot .btn-ghost{width:100%;background:transparent;border-color:var(--sidebar-border);color:var(--sidebar-text)}
+  .sidebar .foot .btn-ghost:hover{background:#1D2040;color:#fff}
 
-  /* Cards */
-  .card{background:#fff;border-radius:18px;padding:22px;margin-bottom:18px;box-shadow:0 2px 10px rgba(15,23,42,.06)}
-  .card h2{font-size:15px;font-weight:900;margin-bottom:4px;display:flex;align-items:center;gap:8px}
-  .card .hint{font-size:12.5px;color:#64748b;margin-bottom:18px;line-height:1.5}
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:18px 32px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:5}
+  .topbar h1{font-size:18px;font-weight:800;letter-spacing:-.01em}
+  .topbar .sub{font-size:12.5px;color:var(--muted);margin-top:1px}
+  .content{padding:26px 32px 70px;max-width:980px;width:100%}
 
-  /* KPIs */
+  /* ══ Cards ══ */
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:22px;margin-bottom:16px;box-shadow:var(--shadow)}
+  .card h2{font-size:14.5px;font-weight:800;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+  .card .hint{font-size:12.5px;color:var(--muted);margin-bottom:18px;line-height:1.55}
+
+  /* ══ KPIs ══ */
   .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
-  .kpi{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:14px;padding:15px}
-  .kpi .lbl{font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
-  .kpi .val{font-size:26px;font-weight:900;line-height:1}
-  .kpi .sub{font-size:11px;color:#94a3b8;margin-top:4px}
+  .kpi{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);padding:15px}
+  .kpi .lbl{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+  .kpi .val{font-size:25px;font-weight:800;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
+  .kpi .sub{font-size:11px;color:var(--muted);margin-top:4px}
 
-  /* News rows */
-  .news-row{display:flex;gap:9px;align-items:flex-start;margin-bottom:10px;padding:12px;background:#fff7ed;border:1.5px solid #fed7aa;border-radius:13px}
-  .news-row .num{width:24px;height:24px;border-radius:8px;background:#f97316;color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:5px}
+  /* ══ News rows ══ */
+  .news-row{display:flex;gap:9px;align-items:flex-start;margin-bottom:10px;padding:12px;background:var(--warn-soft);border:1px solid #F0DCB6;border-radius:var(--r-md)}
+  .news-row .num{width:24px;height:24px;border-radius:8px;background:var(--warn);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:5px}
   .news-row .fields{flex:1;display:flex;flex-direction:column;gap:7px}
-  .news-row textarea{min-height:48px;resize:vertical;font-size:14px;background:#fff;border-color:#fed7aa}
+  .news-row textarea{min-height:48px;resize:vertical;font-size:14px;background:var(--surface);border-color:#F0DCB6}
   .news-row .meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .news-row .meta label{font-size:11px;font-weight:700;color:#9a3412}
-  .news-row input[type=date]{width:auto;padding:7px 10px;font-size:13px;border-color:#fed7aa;background:#fff}
-  .del{width:30px;height:30px;border-radius:9px;border:1.5px solid #fecaca;background:#fef2f2;color:#dc2626;cursor:pointer;font-size:15px;font-weight:900;flex-shrink:0;margin-top:2px;line-height:1}
+  .news-row .meta label{font-size:11px;font-weight:700;color:#8A5A0E}
+  .news-row input[type=date]{width:auto;padding:7px 10px;font-size:13px;border-color:#F0DCB6;background:var(--surface)}
+  .del{width:30px;height:30px;border-radius:9px;border:1px solid #F3CFCF;background:var(--bad-soft);color:var(--bad);cursor:pointer;font-size:15px;font-weight:800;flex-shrink:0;margin-top:2px;line-height:1}
 
-  /* Preview */
-  .preview{display:flex;align-items:center;background:linear-gradient(90deg,#f97316,#fb923c);color:#fff;height:28px;border-radius:9px;overflow:hidden;margin-bottom:16px}
-  .preview .tag{padding:0 10px;height:100%;display:flex;align-items:center;gap:5px;background:rgba(0,0,0,.14);font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;flex-shrink:0}
+  /* ══ Preview ticker ══ */
+  .preview{display:flex;align-items:center;background:var(--ink);color:#fff;height:28px;border-radius:9px;overflow:hidden;margin-bottom:16px}
+  .preview .tag{padding:0 10px;height:100%;display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.08);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;flex-shrink:0}
   .preview .track{flex:1;overflow:hidden;position:relative;height:100%}
-  .preview .track span{position:absolute;white-space:nowrap;top:50%;transform:translateY(-50%);font-size:12px;font-weight:700;animation:scroll 24s linear infinite}
+  .preview .track span{position:absolute;white-space:nowrap;top:50%;transform:translateY(-50%);font-size:12px;font-weight:600;animation:scroll 24s linear infinite}
   @keyframes scroll{from{transform:translate(0,-50%)}to{transform:translate(-50%,-50%)}}
 
   table{width:100%;border-collapse:collapse;font-size:13px}
-  th{text-align:left;padding:9px 8px;font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid #e2e8f0}
-  td{padding:10px 8px;border-bottom:1px solid #f1f5f9}
+  th{text-align:left;padding:9px 8px;font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--border)}
+  td{padding:10px 8px;border-bottom:1px solid var(--surface-2);font-variant-numeric:tabular-nums}
   tr:last-child td{border-bottom:none}
-  .bar{height:18px;border-radius:5px;background:#f1f5f9;overflow:hidden;position:relative;min-width:90px}
-  .bar div{height:100%;border-radius:5px}
+  .bar{height:18px;border-radius:5px;background:var(--surface-2);overflow:hidden;position:relative;min-width:90px}
+  .bar div{height:100%;border-radius:5px;background:var(--accent)}
   .bar span{position:absolute;left:6px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:800}
 
   .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-  .msg{padding:11px 14px;border-radius:11px;font-size:13px;font-weight:700;margin-top:14px}
-  .ok{background:#f0fdf4;color:#15803d;border:1.5px solid #bbf7d0}
-  .err{background:#fef2f2;color:#dc2626;border:1.5px solid #fecaca}
-  .empty{padding:26px;text-align:center;color:#94a3b8;font-size:13px;background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:13px}
-  /* Marken-Tabs */
+  .msg{padding:11px 14px;border-radius:var(--r-md);font-size:13px;font-weight:700;margin-top:14px}
+  .ok{background:var(--good-soft);color:var(--good);border:1px solid #C9E9D6}
+  .err{background:var(--bad-soft);color:var(--bad);border:1px solid #F3CFCF}
+  .empty{padding:26px;text-align:center;color:var(--muted);font-size:13px;background:var(--surface-2);border:1.5px dashed var(--border);border-radius:var(--r-md)}
+
+  /* ══ Marken-Chips ══ */
   .brands{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
-  .brand{padding:10px 18px;border-radius:12px;border:2px solid #e2e8f0;background:#fff;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;color:#94a3b8;transition:all .15s;display:flex;align-items:center;gap:7px}
-  .brand:hover{border-color:#cbd5e1}
-  .brand.on{color:#fff}
+  .brand{padding:9px 16px;border-radius:var(--r-md);border:1.5px solid var(--border);background:var(--surface);font-weight:800;font-size:13.5px;cursor:pointer;font-family:inherit;color:var(--muted);transition:all .15s;display:flex;align-items:center;gap:7px}
+  .brand:hover{border-color:#C9CBDB}
+  .brand.on{color:#fff;border-color:transparent}
   .brand .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
-  .brand .cnt{font-size:11px;font-weight:900;padding:1px 7px;border-radius:999px;background:rgba(0,0,0,.14)}
+  .brand .cnt{font-size:11px;font-weight:800;padding:1px 7px;border-radius:999px;background:rgba(0,0,0,.14)}
 
-  select{padding:9px 12px;font-size:13px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;background:#fff;font-weight:600;cursor:pointer;outline:none}
+  .tabpanel{display:none}
+  .tabpanel.on{display:block}
 
-  /* Coaching-Analyse-Balken */
-  .sec-head{font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+  select{padding:9px 12px;font-size:13px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:inherit;background:var(--surface);color:var(--ink);font-weight:600;cursor:pointer;outline:none}
+  select:focus{border-color:var(--accent)}
+
+  /* ══ Shop-Gruppen (Mitarbeiterverwaltung) ══ */
+  .usr-shop-group summary::-webkit-details-marker{display:none}
+  .usr-shop-group summary{position:relative}
+  .usr-shop-group summary::after{content:'›';position:absolute;right:14px;top:50%;transform:translateY(-50%) rotate(90deg);font-size:16px;font-weight:800;color:var(--muted);transition:transform .15s}
+  .usr-shop-group[open] summary::after{transform:translateY(-50%) rotate(-90deg)}
+
+  /* ══ Ausstehende Freigaben (immer sichtbar, unabhängig von Filter/Gruppen) ══ */
+  .pending-alert{background:var(--warn-soft);border:1.5px solid #EFC373;border-radius:var(--r-lg);padding:16px 18px;margin-bottom:16px}
+  .pending-alert .head{display:flex;align-items:center;gap:9px;font-weight:800;font-size:13.5px;color:#8A5A0E;margin-bottom:12px}
+  .pending-alert .head .n{background:var(--warn);color:#fff;font-size:11.5px;font-weight:800;padding:2px 9px;border-radius:999px}
+  .pending-row{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid #EFC373;border-radius:var(--r-md);padding:10px 12px;margin-bottom:8px;flex-wrap:wrap}
+  .pending-row:last-child{margin-bottom:0}
+  .pending-row .info{flex:1;min-width:160px}
+  .pending-row .nm{font-weight:800;font-size:13.5px;color:var(--ink)}
+  .pending-row .meta{font-size:11.5px;color:var(--muted);margin-top:1px}
+
+  /* ══ Coaching-Analyse-Balken ══ */
+  .sec-head{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;display:flex;align-items:center;gap:7px}
   .arow{display:flex;align-items:center;gap:10px;margin-bottom:9px}
-  .arow .lbl{width:150px;flex-shrink:0;font-size:12.5px;font-weight:600;color:#334155;text-align:right}
-  .arow .track{flex:1;height:22px;border-radius:6px;background:#eef2f9;overflow:hidden;position:relative}
-  .arow .track > div{height:100%;border-radius:6px;transition:width .3s}
-  .arow .cnt{width:96px;flex-shrink:0;font-size:12px;font-weight:800;color:#0f172a}
-  .arow .cnt .pct{color:#94a3b8;font-weight:700;margin-left:4px}
+  .arow .lbl{width:150px;flex-shrink:0;font-size:12.5px;font-weight:600;color:var(--body);text-align:right}
+  .arow .track{flex:1;height:22px;border-radius:6px;background:var(--surface-2);overflow:hidden;position:relative}
+  .arow .track > div{height:100%;border-radius:6px;transition:width .3s;background:var(--accent)}
+  .arow .cnt{width:96px;flex-shrink:0;font-size:12px;font-weight:800;color:var(--ink)}
+  .arow .cnt .pct{color:var(--muted);font-weight:700;margin-left:4px}
   .skipbadge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800}
-  .reason-item{padding:11px 13px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+  .reason-item{padding:11px 13px;border-bottom:1px solid var(--surface-2);display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
   .reason-item:last-child{border-bottom:none}
-  .reason-list{max-height:340px;overflow-y:auto;border:1px solid #eef2f9;border-radius:12px}
+  .reason-list{max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r-md)}
+  .flabel{display:block;font-size:12px;font-weight:800;color:var(--body);margin-bottom:5px}
+  .linklike{background:none;border:none;color:var(--accent-ink);font-weight:800;cursor:pointer;text-decoration:underline;font-size:12px;padding:0;font-family:inherit}
+
+  @media (max-width:860px){
+    #app{flex-direction:column}
+    .sidebar{width:100%;height:auto;position:static;flex-direction:row;flex-wrap:wrap;align-items:center;padding:12px}
+    .sidebar .brand{padding:4px 8px}
+    .navsec{display:none}
+    .tabbtn{width:auto;flex:1;min-width:120px;justify-content:center}
+    .sidebar .foot{margin-top:8px;width:100%}
+    .content{padding:20px 16px 60px}
+    .topbar{padding:14px 16px}
+  }
 </style>
 </head>
 <body>
@@ -106,26 +175,54 @@
 <!-- ══ LOGIN ══ -->
 <div id="login">
   <div class="loginbox">
-    <div style="font-size:40px;margin-bottom:10px">🔐</div>
+    <div class="mark">🔐</div>
     <h1>Pencil Selling</h1>
     <p>Administration</p>
+    <input type="text" id="loginEmail" placeholder="E-Mail" autocomplete="username" style="margin-bottom:10px">
     <input type="password" id="pw" placeholder="Passwort" autocomplete="current-password">
     <button class="btn" style="width:100%;margin-top:12px" onclick="doLogin()">Anmelden</button>
-    <div id="loginErr" style="color:#dc2626;font-size:12.5px;font-weight:700;margin-top:11px;display:none">Falsches Passwort</div>
+    <div id="loginErr" style="color:#C23B3B;font-size:12.5px;font-weight:700;margin-top:11px;display:none">Falsches Passwort</div>
   </div>
 </div>
 
 <!-- ══ APP ══ -->
-<div class="wrap" id="app" style="display:none">
-  <header>
-    <div class="logo">📊</div>
-    <div style="flex:1">
-      <h1>Pencil Selling Administration</h1>
-      <div class="sub">HeTec GmbH · Übersicht &amp; News-Ticker</div>
+<div id="app" style="display:none">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark">📊</div>
+      <div>
+        <div class="name">Pencil Selling</div>
+        <div class="sub">HeTec GmbH · Administration</div>
+      </div>
     </div>
-    <button class="btn btn-ghost btn-sm" onclick="location.reload()">↻ Neu laden</button>
-  </header>
 
+    <div class="navsec">Statistik</div>
+    <button class="tabbtn" data-tab="uebersicht" onclick="switchTab('uebersicht')"><span class="ico">📈</span><span class="lbl">Übersicht</span></button>
+    <button class="tabbtn" data-tab="mitarbeiter" onclick="switchTab('mitarbeiter')"><span class="ico">👤</span><span class="lbl">Mitarbeiter</span></button>
+    <button class="tabbtn" data-tab="coaching" onclick="switchTab('coaching')"><span class="ico">🎯</span><span class="lbl">Coaching-Analyse</span></button>
+    <button class="tabbtn" data-tab="skip" onclick="switchTab('skip')"><span class="ico">⏭️</span><span class="lbl">Skip-Limits</span></button>
+
+    <div class="navsec">Verwaltung</div>
+    <button class="tabbtn" data-tab="mitarbeiterverwaltung" onclick="switchTab('mitarbeiterverwaltung')"><span class="ico">👥</span><span class="lbl">Mitarbeiterverwaltung</span><span class="navbadge" id="navPendingBadge" style="display:none"></span></button>
+    <button class="tabbtn" data-tab="news" onclick="switchTab('news')"><span class="ico">📢</span><span class="lbl">News-Ticker</span></button>
+
+    <div class="navsec">Andere Marken</div>
+    <a class="tabbtn" href="https://hetec-it.github.io/Pencil-Selling-Administration-Telekom/" target="_blank" rel="noopener" style="text-decoration:none"><span class="ico">📡</span><span class="lbl">Fachhandel Statistik</span><span style="font-size:11px;color:var(--sidebar-text)">↗</span></a>
+
+    <div class="foot">
+      <button class="btn btn-ghost btn-sm" onclick="location.reload()">↻ Neu laden</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1 id="pageTitle">Übersicht</h1>
+        <div class="sub">Alle abgeschlossenen Beratungen aus der zentralen Statistik</div>
+      </div>
+    </div>
+    <div class="content">
+  <div class="tabpanel" data-panel="uebersicht">
   <!-- KPIs -->
   <div class="card">
     <h2>📈 Überblick</h2>
@@ -164,35 +261,74 @@
     <div class="kpis" id="kpis"><div class="empty" style="grid-column:1/-1">Lade Daten…</div></div>
     <div id="exemptInfo"></div>
   </div>
-
   <!-- DSL -->
   <div class="card">
     <h2>🌐 DSL-Anbieter der Kunden</h2>
     <div class="hint">Welchen Anbieter hatte der Kunde bisher – und wie oft wurde daraufhin ein DSL-Angebot gemacht? o2-Bestandskunden fallen nicht mehr aus der Auswertung.</div>
     <div id="dsl"><div class="empty">Lade Daten…</div></div>
   </div>
+  </div>
 
+  <div class="tabpanel" data-panel="mitarbeiterverwaltung">
+  <!-- ══════════ MITARBEITERVERWALTUNG ══════════ -->
+  <div class="card" id="inviteCard">
+    <h2>👥 Mitarbeiterverwaltung</h2>
+    <div class="hint">
+      Mitarbeiter registrieren sich selbst direkt in Pencil Selling (Name, E-Mail, Passwort, Shop-Auswahl).
+      Hier siehst du alle Registrierungen, gibst neue Anfragen frei und kannst Shop, Rolle, Testnutzer-Kennzeichen
+      oder Status jederzeit ändern.
+    </div>
+
+    <div style="margin-top:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div style="font-size:13px;font-weight:900;color:#0f172a">👥 Nutzer <span id="usrCount" style="color:#94a3b8;font-weight:700"></span></div>
+      <div style="flex:1"></div>
+      <select id="usrTab" onchange="renderUsers()">
+        <option value="all">Alle</option>
+        <option value="pending">Neu / wartet auf Freigabe</option>
+        <option value="approved">Freigegeben</option>
+        <option value="rejected">Abgelehnt</option>
+        <option value="gesperrt">Gesperrt</option>
+      </select>
+      <button class="btn btn-ghost btn-sm" onclick="loadUsers()">↻ Aktualisieren</button>
+    </div>
+    <div id="usrMsg"></div>
+    <div id="usrPendingAlert"></div>
+    <div id="usrList" style="margin-top:12px"><div class="empty">Lade…</div></div>
+  </div>
+  </div>
+
+  <div class="tabpanel" data-panel="mitarbeiter">
   <!-- Mitarbeiter -->
   <div class="card">
     <h2>👥 Mitarbeiter</h2>
-    <div class="hint">Vorgänge und Abschlussquote je Mitarbeiter im gewählten Zeitraum.</div>
+    <div class="hint">Vorgänge und Abschlussquote je Mitarbeiter im gewählten Zeitraum. Zeigt immer alle Mitarbeiter – unabhängig von der Mitarbeiter-Auswahl in der Übersicht.</div>
     <div id="agents"><div class="empty">Lade Daten…</div></div>
   </div>
+  </div>
 
+  <div class="tabpanel" data-panel="coaching">
   <!-- Coaching -->
   <div class="card">
     <h2>🎯 Coaching-Analyse</h2>
     <div class="hint">
       Wie konsequent wird die Mappe genutzt? Zeigt je Feld, wie oft es tatsächlich ausgefüllt wurde –
-      die Basis für gezielte Entwicklungsgespräche. Folgt dem <b>Mitarbeiter-Filter oben</b>.
+      die Basis für gezielte Entwicklungsgespräche.
     </div>
-    <div id="coachScope" style="font-size:12px;font-weight:700;color:#2563eb;margin-bottom:14px"></div>
+    <div class="row" style="margin-bottom:14px">
+      <label style="font-size:12px;font-weight:800;color:var(--muted)">🏪 Shop:</label>
+      <select id="coachShopFilter" onchange="coachShopChange()"><option value="__all__">Alle Shops</option></select>
+      <label style="font-size:12px;font-weight:800;color:var(--muted);margin-left:8px">👤 Mitarbeiter:</label>
+      <select id="coachEmpFilter" onchange="coachEmpChange()"><option value="__all__">Alle Mitarbeiter</option></select>
+    </div>
+    <div id="coachScope" style="font-size:12px;font-weight:700;color:var(--accent-ink);margin-bottom:14px"></div>
     <div id="coachQuality"></div>
     <div id="coachIst"></div>
     <div id="coachOffer" style="margin-top:20px"></div>
     <div id="coachCost" style="margin-top:20px"></div>
   </div>
+  </div>
 
+  <div class="tabpanel" data-panel="skip">
   <!-- Skip-Limits -->
   <div class="card">
     <h2>⏭️ Skip-Limits &amp; Gründe</h2>
@@ -203,15 +339,22 @@
       „Überspringen" im Pencil Selling gesperrt, bis Limit &gt; Zähler ist.
       Darunter die digital erfassten Gründe – wichtig, um Muster zu erkennen (z.&nbsp;B. „zu wenig Zeit“).
     </div>
+    <div id="skipResetInfo" style="margin-bottom:12px"></div>
     <div id="skipMsg"></div>
     <div id="skipTable"><div class="empty">Lade Daten…</div></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin:22px 0 10px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:22px 0 10px;gap:10px;flex-wrap:wrap">
       <div style="font-size:13px;font-weight:900;color:#0f172a">📋 Digitale Skip-Gründe <span id="skipReasonCount" style="color:#94a3b8;font-weight:700"></span></div>
-      <button class="btn btn-ghost btn-sm" onclick="exportSkipCSV()">⬇ Gründe als CSV</button>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="font-size:12px;font-weight:800;color:var(--muted)">👤 Mitarbeiter:</label>
+        <select id="skipReasonEmpFilter" onchange="renderSkip()"><option value="__all__">Alle Mitarbeiter</option></select>
+        <button class="btn btn-ghost btn-sm" onclick="exportSkipCSV()">⬇ Gründe als CSV</button>
+      </div>
     </div>
     <div id="skipReasons"><div class="empty">Lade Daten…</div></div>
   </div>
+  </div>
 
+  <div class="tabpanel" data-panel="news">
   <!-- News -->
   <div class="card">
     <h2>📢 News-Ticker</h2>
@@ -239,6 +382,40 @@
     </div>
     <div id="newsMsg"></div>
   </div>
+  </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- ══ EIGENES TESTKONTO VOLLSTÄNDIG LÖSCHEN ══ -->
+<div id="ownAccountDeleteModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(15,23,42,.68);align-items:center;justify-content:center;padding:18px">
+  <div style="width:100%;max-width:470px;background:#fff;border-radius:20px;padding:24px;box-shadow:0 24px 80px rgba(0,0,0,.38)">
+    <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px">
+      <div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:13px;background:#fef2f2;font-size:23px;flex-shrink:0">🗑️</div>
+      <div>
+        <div style="font-size:17px;font-weight:900;color:#991b1b">Eigenes Testkonto vollständig löschen</div>
+        <div style="font-size:12.5px;line-height:1.5;color:#64748b;margin-top:4px">Gelöscht werden ausschließlich dein Firebase-Login und dein Benutzerprofil <b>users/{uid}</b>. Statistiken, Angebote und andere Nutzer bleiben erhalten.</div>
+      </div>
+    </div>
+
+    <div style="padding:12px 14px;border-radius:12px;background:#fff7ed;border:1.5px solid #fed7aa;color:#9a3412;font-size:12.5px;line-height:1.5;margin-bottom:15px">
+      <b>Achtung:</b> Danach wirst du sofort abgemeldet. Für den nächsten Test musst du dich mit <b>d.dasilva@hetec-gmbh.de</b> neu registrieren und die E-Mail-Adresse erneut bestätigen.
+    </div>
+
+    <label class="flabel" for="ownDeletePassword">Aktuelles Firebase-Passwort</label>
+    <input type="password" id="ownDeletePassword" placeholder="Passwort eingeben" autocomplete="current-password">
+
+    <label class="flabel" for="ownDeleteConfirm" style="margin-top:13px">Zur Bestätigung LÖSCHEN eingeben</label>
+    <input type="text" id="ownDeleteConfirm" placeholder="LÖSCHEN" autocomplete="off">
+
+    <div id="ownDeleteError" class="msg err" style="display:none;margin-top:13px"></div>
+
+    <div style="display:flex;justify-content:flex-end;gap:9px;margin-top:18px;flex-wrap:wrap">
+      <button class="btn btn-ghost" id="ownDeleteCancelBtn" onclick="closeOwnAccountDeleteDialog()">Abbrechen</button>
+      <button class="btn btn-danger" id="ownDeleteConfirmBtn" onclick="deleteOwnAdminTestAccount()">🗑 Konto endgültig löschen</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -251,7 +428,9 @@ const FB = {
   messagingSenderId: "166126857606",
   appId: "1:166126857606:web:0b29898ae53a8c3aaa1007"
 };
-const ADMIN_PW = 'telekom2026';   // gleiches Passwort wie in Pencil Selling
+// Die Statistik-App immer ausdrücklich als [DEFAULT]-App initialisieren.
+// So funktioniert die Seite auch dann, wenn die separate Auth-App bereits existiert.
+const statsApp = firebase.apps.find(a => a.name === '[DEFAULT]') || firebase.initializeApp(FB);
 const NEWS_MAX = 5;
 
 // ── Marken: je Marke ein eigenes Firestore-Dokument (news/o2, news/telekom, …) ──
@@ -264,7 +443,8 @@ let brand = 'o2';                 // aktuell bearbeitete Marke
 let newsByBrand = {};             // { o2:[…], telekom:[…], vodafone:[…] }
 let dirty = {};                   // { o2:true } = ungespeicherte Änderungen
 
-let db = null, rows = [];
+let db = firebase.firestore(statsApp), rows = [];
+window.rows = rows;
 
 // Bequemer Zugriff auf die Meldungen der aktuellen Marke
 function curNews(){
@@ -273,30 +453,110 @@ function curNews(){
 }
 
 // ── Login ──
-function doLogin(){
+// Anmeldung per echtem Firebase-Login mit E-Mail + Passwort. Dadurch kennen
+// die Firestore-Regeln den Nutzer und die Mitarbeiterverwaltung bekommt
+// Zugriff. Zugelassen sind: der fest hinterlegte Bootstrap-Admin
+// (PS_ADMIN_EMAIL) sowie jeder freigegebene Mitarbeiter mit Rolle
+// "Administrator" (role:'admin', active:true) — siehe ensureAdminProfile().
+async function doLogin(){
+  const email = (document.getElementById('loginEmail').value || '').trim().toLowerCase();
   const v = document.getElementById('pw').value;
-  if (v !== ADMIN_PW){
-    document.getElementById('loginErr').style.display = 'block';
-    return;
+  const btn = document.querySelector('#login .btn');
+  const err = document.getElementById('loginErr');
+  err.style.display = 'none';
+  if (!email){ err.textContent = 'Bitte E-Mail eingeben.'; err.style.display = 'block'; return; }
+  if (btn){ btn.disabled = true; btn.textContent = 'Prüfe…'; }
+  try {
+    const cred = await getAdminAuth().signInWithEmailAndPassword(email, v);
+    if (cred.user) await cred.user.getIdToken(true);
+    await ensureAdminProfile();
+    try { sessionStorage.setItem('hetec_admin', '1'); } catch(e){}
+    start();
+  } catch(e){
+    console.error('Admin-Login fehlgeschlagen:', e);
+    err.textContent = e && e.code === 'permission-denied'
+      ? 'Firestore-Regeln noch nicht aktualisiert.'
+      : (e && e.message === 'Dieses Konto hat keine Administratorrechte.'
+          ? e.message
+          : 'Anmeldung fehlgeschlagen. E-Mail/Passwort prüfen.');
+    err.style.display = 'block';
   }
-  try { sessionStorage.setItem('hetec_admin', '1'); } catch(e){}
-  start();
+  if (btn){ btn.disabled = false; btn.textContent = 'Anmelden'; }
 }
 document.getElementById('pw').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-try { if (sessionStorage.getItem('hetec_admin') === '1') setTimeout(start, 0); } catch(e){}
+document.getElementById('loginEmail').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+// ── Haupt-Tabs ──
+const TAB_TITLES = {
+  uebersicht: ['Übersicht', 'Alle abgeschlossenen Beratungen aus der zentralen Statistik'],
+  mitarbeiterverwaltung: ['Mitarbeiterverwaltung', 'Registrierungen freigeben, Shop & Rolle verwalten'],
+  mitarbeiter: ['Mitarbeiter', 'Vorgänge und Abschlussquote je Mitarbeiter'],
+  coaching: ['Coaching-Analyse', 'Wie konsequent wird die Mappe genutzt?'],
+  skip: ['Skip-Limits', 'Übersprungene Beratungen & digitale Gründe'],
+  news: ['News-Ticker', 'Meldungen je Marke verwalten']
+};
+function switchTab(name){
+  document.querySelectorAll('.tabbtn').forEach(b => b.classList.toggle('on', b.getAttribute('data-tab') === name));
+  document.querySelectorAll('.tabpanel').forEach(p => p.classList.toggle('on', p.getAttribute('data-panel') === name));
+  const t = TAB_TITLES[name];
+  if (t){
+    const h1 = document.getElementById('pageTitle');
+    const sub = document.querySelector('.topbar .sub');
+    if (h1) h1.textContent = t[0];
+    if (sub) sub.textContent = t[1];
+  }
+  try { sessionStorage.setItem('hetec_admin_tab', name); } catch(e){}
+}
+
+function updatePendingBadge(){
+  const rows = window.__usrRows || [];
+  const n = rows.filter(r => r.status === 'pending').length;
+  const el = document.getElementById('navPendingBadge');
+  if (el){
+    if (n > 0){ el.textContent = n; el.style.display = 'inline-block'; }
+    else { el.style.display = 'none'; }
+  }
+  renderPendingAlert();
+}
+
+// Immer sichtbarer Block oben in der Mitarbeiterverwaltung – zeigt ALLE
+// wartenden Registrierungen an, unabhängig vom usrTab-Filter und egal ob
+// die jeweilige Shop-Gruppe unten gerade auf- oder zugeklappt ist.
+function renderPendingAlert(){
+  const box = document.getElementById('usrPendingAlert');
+  if (!box) return;
+  const pending = (window.__usrRows || []).filter(r => r.status === 'pending')
+    .sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
+  if (!pending.length){ box.innerHTML = ''; return; }
+
+  box.innerHTML = '<div class="pending-alert">'
+    + '<div class="head"><span>⏳ Wartet auf Freigabe</span><span class="n">' + pending.length + '</span></div>'
+    + pending.map(r => {
+        const name = esc(r.name || ((r.vorname||'')+' '+(r.nachname||'')).trim()) || esc(r.email||'');
+        const shop = esc(SHOP_NAMES[r.shopId] || r.shop || 'Ohne Shop');
+        return '<div class="pending-row">'
+          + '<div class="info"><div class="nm">' + (name||'–') + '</div><div class="meta">' + esc(r.email||'') + ' · ' + shop + '</div></div>'
+          + '<button class="btn btn-sm" onclick="usrApprove(\'' + r.id + '\')">Freigeben</button>'
+          + '<button class="btn btn-sm btn-danger" onclick="usrReject(\'' + r.id + '\')">Ablehnen</button>'
+          + '</div>';
+      }).join('')
+    + '</div>';
+}
 
 function start(){
   document.getElementById('login').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  try {
-    const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(FB);
-    db = firebase.firestore(app);
-  } catch(e){
-    alert('Keine Verbindung zu Firebase: ' + e.message);
+  document.getElementById('app').style.display = 'flex';
+  let startTab = 'uebersicht';
+  try { startTab = sessionStorage.getItem('hetec_admin_tab') || 'uebersicht'; } catch(e){}
+  switchTab(startTab);
+  // Firebase wurde bereits vor dem Login sauber initialisiert.
+  if (!db){
+    alert('Keine Verbindung zur Statistik-Datenbank. Bitte die Seite neu laden.');
     return;
   }
   loadNews();
   loadStats();
+  try { loadUsers(); } catch(e){}
 }
 
 // ══ NEWS ══
@@ -438,6 +698,8 @@ async function loadStats(){
   await loadSkipLimits();
   fillShopDropdown();
   fillEmpDropdown();
+  fillCoachShopDropdown();
+  fillCoachEmpDropdown();
   renderAll();
 }
 
@@ -559,6 +821,8 @@ async function delAgentRows(i){
     // Lokal entfernen und alles neu aufbauen
     rows = rows.filter(r => (r.user||'').toString().trim() !== a);
     fillShopDropdown();
+    window.rows = rows;
+    try { fillShopSuggestions(); } catch(e){}
     fillEmpDropdown();
     renderAll();
     skipMsg('✅ ' + entries.length + ' Vorgänge von ' + a + ' gelöscht.', true);
@@ -597,13 +861,65 @@ function abar(label, count, total, color){
     '<div class="cnt">'+count+'×<span class="pct">'+pct+'%</span></div></div>';
 }
 
+// Coaching-Filter sind ABSICHTLICH komplett unabhängig vom Shop-/Mitarbeiter-
+// Filter oben in der Übersicht (und von der Mitarbeiter-Tabelle) – eine
+// Auswahl hier wirkt nur auf die Coaching-Analyse, sonst nirgends, und
+// umgekehrt beeinflusst die Übersicht-Auswahl die Coaching-Analyse nicht.
+function coachCurrentShopFilter(){ return (document.getElementById('coachShopFilter')||{}).value || '__all__'; }
+function coachCurrentEmpFilter(){ return (document.getElementById('coachEmpFilter')||{}).value || '__all__'; }
+function coachMatchesShop(r){
+  const f = coachCurrentShopFilter();
+  if (f === '__all__') return true;
+  if (f === '__none__') return shopIdOf(r) === '';
+  return shopIdOf(r) === f;
+}
+function coachMatchesEmp(r){
+  const e = coachCurrentEmpFilter();
+  if (e === '__all__') return true;
+  return (r.user||'').toString().trim() === e;
+}
+function coachShopRows(){ return rows.filter(coachMatchesShop); }
+function coachRows(){ return rows.filter(r => coachMatchesShop(r) && coachMatchesEmp(r)); }
+function coachWRows(){ return coachRows().filter(r => !isExemptRow(r)); }
+
+function fillCoachShopDropdown(){
+  const sel = document.getElementById('coachShopFilter');
+  if (!sel) return;
+  const cur = sel.value || '__all__';
+  const map = {};
+  rows.forEach(r => { const id = shopIdOf(r); if (id) map[id] = shopNameOf(r); });
+  const entries = Object.entries(map).sort((a,b)=>a[1].localeCompare(b[1]));
+  const hasNone = rows.some(r => shopIdOf(r) === '');
+  let html = '<option value="__all__">Alle Shops</option>';
+  entries.forEach(([id,name]) => { html += '<option value="'+esc(id)+'">'+esc(name)+'</option>'; });
+  if (hasNone) html += '<option value="__none__">(ohne Shop-Zuordnung)</option>';
+  sel.innerHTML = html;
+  sel.value = cur;
+}
+function fillCoachEmpDropdown(){
+  const sel = document.getElementById('coachEmpFilter');
+  if (!sel) return;
+  const cur = sel.value || '__all__';
+  const agents = [...new Set(coachShopRows().map(r => (r.user||'').toString().trim()).filter(u => u && u !== '–' && u !== 'Unbekannt'))].sort();
+  sel.innerHTML = '<option value="__all__">Alle Mitarbeiter</option>' + agents.map(a => '<option value="'+esc(a)+'">'+esc(a)+'</option>').join('');
+  sel.value = (cur === '__all__' || agents.includes(cur)) ? cur : '__all__';
+}
+function coachShopChange(){
+  fillCoachEmpDropdown();
+  renderCoaching();
+}
+function coachEmpChange(){
+  renderCoaching();
+}
+
 function renderCoaching(){
-  // Folgt dem globalen Shop- + Mitarbeiter-Filter.
+  // Eigener, unabhängiger Shop-/Mitarbeiter-Filter (siehe oben) – NICHT der
+  // globale Filter aus der Übersicht.
   // Freigeschaltete Mitarbeiter zählen nicht in die Analyse – ES SEI DENN,
   // es ist gezielt genau dieser Mitarbeiter oben ausgewählt (dann will man ihn ja sehen).
-  const emp = currentEmpFilter();
+  const emp = coachCurrentEmpFilter();
   const einzeln = (emp !== '__all__');
-  const f = (einzeln ? SROWS() : WROWS()).filter(r => inRange(r));
+  const f = (einzeln ? coachRows() : coachWRows()).filter(r => inRange(r));
   const total = f.length;
   // Scope-Hinweis
   const sc = document.getElementById('coachScope');
@@ -672,6 +988,21 @@ function renderCoaching(){
 }
 
 function renderSkip(){
+  // Countdown bis zum automatischen Zurücksetzen (Skip-Zähler laufen pro
+  // Kalendermonat, siehe monthKey() – am 1. jeden Monats startet ein neuer
+  // Zähler bei 0).
+  const riBox = document.getElementById('skipResetInfo');
+  if (riBox){
+    const now = new Date();
+    const letzterTagMonat = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+    const tageBisReset = letzterTagMonat - now.getDate();
+    const naechster = new Date(now.getFullYear(), now.getMonth()+1, 1);
+    const naechsterFmt = naechster.toLocaleDateString('de-DE', { day:'2-digit', month:'long' });
+    riBox.innerHTML = '<div style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:#8A5A0E;background:var(--warn-soft);border:1px solid #EFC373;padding:8px 13px;border-radius:var(--r-sm)">'
+      + '🔄 Zähler setzen sich automatisch zurück in <b>' + tageBisReset + (tageBisReset===1?' Tag':' Tagen') + '</b> (am ' + naechsterFmt + ')'
+      + '</div>';
+  }
+
   // Tabelle – nur Mitarbeiter des gewählten Shops
   const shopAgents = new Set(SROWS().map(r => (r.user||'').toString().trim()).filter(u => u && u !== '–' && u !== 'Unbekannt'));
   const noFilter = currentShopFilter() === '__all__' && currentEmpFilter() === '__all__';
@@ -713,16 +1044,28 @@ function renderSkip(){
   }
 
   // Digitale Gründe (aus analytics: skipReasonText) – GRUPPIERT
-  const reasons = SROWS()
+  const reasonsAll = SROWS()
     .filter(r => inRange(r))
     .filter(r => !isExemptRow(r))          // Freigeschaltete tauchen hier nicht auf
     .filter(r => r.skipReasonText && String(r.skipReasonText).trim())
     .map(r => ({ user:(r.user||'–').toString().trim(), ts:r.ts, text:String(r.skipReasonText).trim() }))
     .sort((a,b) => new Date(b.ts) - new Date(a.ts));
 
-  document.getElementById('skipReasonCount').textContent = '('+reasons.length+')';
+  // Mitarbeiter-Dropdown für die Gründe-Liste befüllen (unabhängig, damit
+  // die Auswahl bei jedem renderSkip() erhalten bleibt).
+  const reEmpSel = document.getElementById('skipReasonEmpFilter');
+  if (reEmpSel){
+    const cur = reEmpSel.value || '__all__';
+    const namen = [...new Set(reasonsAll.map(r => r.user).filter(u => u && u !== '–'))].sort();
+    reEmpSel.innerHTML = '<option value="__all__">Alle Mitarbeiter</option>' + namen.map(n => '<option value="'+esc(n)+'">'+esc(n)+'</option>').join('');
+    reEmpSel.value = (cur === '__all__' || namen.includes(cur)) ? cur : '__all__';
+  }
+  const reFilter = (reEmpSel && reEmpSel.value) || '__all__';
+  const reasons = reFilter === '__all__' ? reasonsAll : reasonsAll.filter(r => r.user === reFilter);
+
+  document.getElementById('skipReasonCount').textContent = '('+reasons.length+(reFilter!=='__all__' ? ' von '+reasonsAll.length : '')+')';
   const box = document.getElementById('skipReasons');
-  if (!reasons.length){ box.innerHTML = '<div class="empty">Keine digital erfassten Skip-Gründe im Zeitraum.</div>'; return; }
+  if (!reasons.length){ box.innerHTML = '<div class="empty">Keine digital erfassten Skip-Gründe' + (reFilter!=='__all__' ? ' für '+esc(reFilter) : '') + ' im Zeitraum.</div>'; return; }
 
   // Feste Gründe aus dem Pencil Selling (alles andere = „Sonstiges")
   const FIXED = ['Nur Handyfinanzierung','Sprachbarrieren','Shop Agent keine Lust','Zeitdruck / zu wenig Zeit','Technischer Fehler / App-Problem'];
@@ -780,12 +1123,13 @@ function fmtDate(ts){
 }
 
 function exportSkipCSV(){
-  
+  const reFilter = (document.getElementById('skipReasonEmpFilter')||{}).value || '__all__';
   const reasons = SROWS()
     .filter(r => inRange(r))
     .filter(r => !isExemptRow(r))          // Freigeschaltete tauchen hier nicht auf
     .filter(r => r.skipReasonText && String(r.skipReasonText).trim())
     .map(r => ({ user:(r.user||'–').toString().trim(), ts:r.ts, text:String(r.skipReasonText).trim() }))
+    .filter(r => reFilter === '__all__' || r.user === reFilter)
     .sort((a,b) => new Date(b.ts) - new Date(a.ts));
   const lines = [['Mitarbeiter','Datum','Grund'].join(';')];
   reasons.forEach(r => lines.push([r.user, fmtDate(r.ts), '"'+r.text.replace(/"/g,'""')+'"'].join(';')));
@@ -952,6 +1296,10 @@ function renderStats(){
   if (ri) ri.textContent = w ? ('📅 ' + w.label) : '📅 Gesamter Zeitraum';
   const f = WROWS().filter(r => inRange(r));
   const fAll = SROWS().filter(r => inRange(r));           // inkl. Freigeschaltete (nur zur Anzeige)
+  // Mitarbeiter-Tabelle bewusst NUR nach Shop gefiltert, NICHT nach der
+  // Mitarbeiter-Auswahl oben – die ist nur für die KPIs/DSL hier in der
+  // Übersicht gedacht, die Mitarbeiter-Tabelle soll immer alle zeigen.
+  const fAllNoEmp = shopRows().filter(r => inRange(r));
   const exCount = fAll.length - f.length;
 
   // KPIs
@@ -1012,47 +1360,95 @@ function renderStats(){
   }
 
   // Mitarbeiter – Freigeschaltete werden angezeigt, aber als „außer Wertung" markiert
+  const ISTk = IST_KEYS.map(([k])=>k);
   const byA = {};
-  fAll.forEach(r => {
+  fAllNoEmp.forEach(r => {
     const u = r.user || '–';
     if (u === '–') return;
-    if (!byA[u]) byA[u] = { u, total:0, ab:0, ex:isExemptRow(r) };
+    if (!byA[u]) byA[u] = { u, total:0, ab:0, ex:isExemptRow(r), complete:0 };
     byA[u].total++;
     if (r.result === 'Abschluss') byA[u].ab++;
+    const cs = r.canvasStats||{};
+    if (ISTk.every(k => cs[k] && cs[k].used)) byA[u].complete++;
   });
-  // Gewertete zuerst (nach Beratungen), Freigeschaltete unten dran
-  const al = Object.values(byA).sort((a,b) => (a.ex?1:0)-(b.ex?1:0) || b.total - a.total);
-  const aBox = document.getElementById('agents');
-  if (!al.length){
-    aBox.innerHTML = '<div class="empty">Keine Daten im gewählten Zeitraum.</div>';
-  } else {
-    let h = '<table><tr><th>Mitarbeiter</th><th>Beratungen</th><th>Abschlüsse</th><th style="text-align:right">Quote</th></tr>';
-    al.forEach(a => {
-      const q = a.total ? Math.round(a.ab / a.total * 100) : 0;
-      if (a.ex){
-        // außer Wertung: grau, mit Badge – Zahlen trotzdem sichtbar
-        h += '<tr style="background:#f8fafc;color:#94a3b8">' +
-          '<td style="font-weight:700;color:#64748b">' + esc(a.u) +
-            ' <span class="skipbadge" style="background:#eff6ff;color:#2563eb">außer Wertung</span></td>' +
-          '<td>' + a.total + '</td>' +
-          '<td>' + a.ab + '</td>' +
-          '<td style="text-align:right;font-weight:700">' + q + '%</td>' +
-        '</tr>';
-      } else {
-        h += '<tr>' +
-          '<td style="font-weight:700">' + esc(a.u) + '</td>' +
-          '<td>' + a.total + '</td>' +
-          '<td style="color:#16a34a;font-weight:700">' + a.ab + '</td>' +
-          '<td style="text-align:right;font-weight:800;color:' + (q >= 30 ? '#16a34a' : q >= 15 ? '#f59e0b' : '#94a3b8') + '">' + q + '%</td>' +
-        '</tr>';
-      }
-    });
-    aBox.innerHTML = h + '</table>';
-  }
+  Object.values(byA).forEach(a => {
+    a.quote = a.total ? Math.round(a.ab / a.total * 100) : 0;
+    a.qual = a.total ? Math.round(a.complete / a.total * 100) : 0;
+  });
+  window.__agentRows = Object.values(byA);
+  renderAgentsTable();
 
   // Zeitraumwechsel wirkt auch auf Coaching & Skip-Gründe
   try { renderCoaching(); } catch(e){}
   try { renderSkip(); } catch(e){}
+}
+
+// Sortierbare Mitarbeiter-Tabelle. Klick auf eine Spaltenüberschrift
+// sortiert danach; erneuter Klick kehrt die Richtung um (▲/▼).
+window.__agentSort = window.__agentSort || { key:'total', dir:'desc' };
+const AGENT_SORT_COLS = {
+  u:     { label:'Mitarbeiter',  type:'text' },
+  total: { label:'Beratungen',   type:'num' },
+  ab:    { label:'Abschlüsse',   type:'num' },
+  quote: { label:'Quote',        type:'num' },
+  qual:  { label:'Qualität',     type:'num' }
+};
+function setAgentSort(key){
+  const s = window.__agentSort;
+  if (s.key === key){ s.dir = s.dir === 'desc' ? 'asc' : 'desc'; }
+  else { s.key = key; s.dir = (key === 'u') ? 'asc' : 'desc'; }
+  renderAgentsTable();
+}
+function agentSortArrow(key){
+  const s = window.__agentSort;
+  if (s.key !== key) return '<span style="color:#C9CBDB">↕</span>';
+  return s.dir === 'desc' ? '▼' : '▲';
+}
+function renderAgentsTable(){
+  const aBox = document.getElementById('agents');
+  if (!aBox) return;
+  const al = (window.__agentRows || []).slice();
+  const s = window.__agentSort;
+  const col = AGENT_SORT_COLS[s.key] || AGENT_SORT_COLS.total;
+  al.sort((a,b) => {
+    let cmp;
+    if (col.type === 'text') cmp = String(a[s.key]).localeCompare(String(b[s.key]), 'de');
+    else cmp = (a[s.key] || 0) - (b[s.key] || 0);
+    return s.dir === 'asc' ? cmp : -cmp;
+  });
+
+  if (!al.length){
+    aBox.innerHTML = '<div class="empty">Keine Daten im gewählten Zeitraum.</div>';
+    return;
+  }
+  const th = (key) => '<th style="cursor:pointer;user-select:none" onclick="setAgentSort(\''+key+'\')" title="Sortieren">'
+    + AGENT_SORT_COLS[key].label + ' ' + agentSortArrow(key) + '</th>';
+  let h = '<table><tr>' + th('u') + th('total') + th('ab')
+    + '<th style="text-align:right;cursor:pointer;user-select:none" onclick="setAgentSort(\'quote\')" title="Sortieren">Quote ' + agentSortArrow('quote') + '</th>'
+    + '<th style="text-align:right;cursor:pointer;user-select:none" onclick="setAgentSort(\'qual\')" title="Sortieren">Qualität ' + agentSortArrow('qual') + '</th>'
+    + '</tr>';
+  al.forEach(a => {
+    if (a.ex){
+      // außer Wertung: grau, mit Badge – Zahlen trotzdem sichtbar
+      h += '<tr style="background:var(--surface-2);color:var(--muted)">' +
+        '<td style="font-weight:700;color:var(--body)">' + esc(a.u) +
+          ' <span class="skipbadge" style="background:var(--accent-soft);color:var(--accent-ink)">außer Wertung</span></td>' +
+        '<td>' + a.total + '</td>' +
+        '<td>' + a.ab + '</td>' +
+        '<td style="text-align:right;font-weight:700">' + a.quote + '%</td>' +
+        '<td style="text-align:right;font-weight:700">' + a.qual + '%</td>' +
+      '</tr>';
+    } else {
+      h += '<tr>' +
+        '<td style="font-weight:700">' + esc(a.u) + '</td>' +
+        '<td>' + a.total + '</td>' +
+        '<td style="color:var(--good);font-weight:700">' + a.ab + '</td>' +
+        '<td style="text-align:right;font-weight:800;color:' + (a.quote >= 30 ? 'var(--good)' : a.quote >= 15 ? 'var(--warn)' : 'var(--muted)') + '">' + a.quote + '%</td>' +
+        '<td style="text-align:right;font-weight:800;color:' + (a.qual >= 75 ? 'var(--good)' : a.qual >= 50 ? 'var(--warn)' : 'var(--bad)') + '">' + a.qual + '%</td>' +
+      '</tr>';
+    }
+  });
+  aBox.innerHTML = h + '</table>';
 }
 
 function kpi(l, v, s, c){
@@ -1061,6 +1457,544 @@ function kpi(l, v, s, c){
          (s ? '<div class="sub">' + s + '</div>' : '') + '</div>';
 }
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+
+// ══════════════════════════════════════════════════════════════════
+//  MITARBEITER & EINLADUNGEN  (Beta-Projekt: beta-pencil-selling)
+//  Separate Firebase-App 'auth' – getrennt von der Stats-DB oben.
+// ══════════════════════════════════════════════════════════════════
+const AUTH_FB = {
+  apiKey: "AIzaSyAV2CD6Kwp0WVmeGuVO4lIHbAf-UhrQZ1M",
+  authDomain: "beta-pencil-selling.firebaseapp.com",
+  projectId: "beta-pencil-selling",
+  storageBucket: "beta-pencil-selling.firebasestorage.app",
+  messagingSenderId: "154760755449",
+  appId: "1:154760755449:web:a4a006f738077eb5344a28"
+};
+
+
+const PS_ADMIN_EMAIL = 'd.dasilva@hetec-gmbh.de';
+
+function getAuthApp(){
+  const existing = firebase.apps.find(a => a.name === 'auth');
+  return existing ? existing : firebase.initializeApp(AUTH_FB, 'auth');
+}
+
+let authDb = null;
+function getAuthDb(){
+  if (authDb) return authDb;
+  authDb = firebase.firestore(getAuthApp());
+  return authDb;
+}
+function getAdminAuth(){
+  return firebase.auth(getAuthApp());
+}
+
+// Erstellt/verifiziert das Firestore-Profil des angemeldeten Administrators.
+// Zwei Fälle:
+//  1) Bootstrap-Admin (PS_ADMIN_EMAIL): Profil wird wie bisher automatisch
+//     angelegt/gepflegt, falls es fehlt.
+//  2) Jeder andere Nutzer: sein Profil muss bereits existieren und
+//     role:'admin' + active:true haben (in der Mitarbeiterverwaltung über
+//     das Rollen-Dropdown vergeben). Wird NICHT automatisch angelegt oder
+//     überschrieben – nur geprüft. Fehlt die Berechtigung, wird abgemeldet.
+async function ensureAdminProfile(){
+  const user = getAdminAuth().currentUser;
+  if (!user) throw new Error('Kein Administrator angemeldet.');
+  const isBootstrap = (user.email || '').toLowerCase() === PS_ADMIN_EMAIL.toLowerCase();
+
+  const ref = getAuthDb().collection('users').doc(user.uid);
+  const snap = await ref.get();
+  const serverNow = firebase.firestore.FieldValue.serverTimestamp();
+
+  if (!isBootstrap){
+    const data = snap.exists ? (snap.data() || {}) : null;
+    if (!data || data.role !== 'admin' || data.active !== true){
+      await getAdminAuth().signOut();
+      throw new Error('Dieses Konto hat keine Administratorrechte.');
+    }
+    return;
+  }
+
+  if (!snap.exists){
+    await ref.set({
+      email: PS_ADMIN_EMAIL,
+      name: 'Diego da Silva',
+      vorname: 'Diego',
+      nachname: 'da Silva',
+      role: 'admin',
+      active: true,
+      status: 'approved',
+      isTestUser: false,
+      shopId: '',
+      shop: 'Verwaltung / Alle Shops',
+      createdAt: serverNow,
+      updatedAt: serverNow
+    });
+  } else {
+    const data = snap.data() || {};
+    const patch = {
+      email: PS_ADMIN_EMAIL,
+      role: 'admin',
+      active: true,
+      status: 'approved',
+      isTestUser: false,
+      updatedAt: serverNow
+    };
+    if (!data.name) patch.name = 'Diego da Silva';
+    if (!data.vorname) patch.vorname = 'Diego';
+    if (!data.nachname) patch.nachname = 'da Silva';
+    if (!data.shop) patch.shop = 'Verwaltung / Alle Shops';
+    await ref.set(patch, { merge: true });
+  }
+}
+
+// Die bestehende Firebase-Sitzung erst jetzt prüfen, nachdem AUTH_FB definiert ist.
+function restoreAdminSession(){
+  let marked = false;
+  try { marked = sessionStorage.getItem('hetec_admin') === '1'; } catch(e){}
+  if (!marked) return;
+
+  getAdminAuth().onAuthStateChanged(async user => {
+    if (!user){
+      try { sessionStorage.removeItem('hetec_admin'); } catch(e){}
+      return;
+    }
+    try {
+      await user.getIdToken(true);
+      await ensureAdminProfile();
+      start();
+    } catch(e){
+      console.error('Admin-Sitzung konnte nicht wiederhergestellt werden:', e);
+      try { sessionStorage.removeItem('hetec_admin'); } catch(_){}
+    }
+  });
+}
+
+const SHOP_NAMES = {
+  'aalen': 'o2 Shop Aalen',
+  'crailsheim': 'o2 Shop Crailsheim',
+  'schwaebisch-hall': 'o2 Shop Schwäbisch Hall',
+  'freilassing': 'o2 Shop Freilassing',
+  'neuoetting': 'o2 Shop Neuötting',
+  'rosenheim': 'o2 Shop Rosenheim',
+  'sindelfingen': 'o2 Shop Sindelfingen',
+  'stuttgart-vaihingen': 'o2 Shop Stuttgart-Vaihingen',
+  'traunreut': 'o2 Shop Traunreut',
+  'traunstein': 'o2 Shop Traunstein',
+  'waldkraiburg': 'o2 Shop Waldkraiburg',
+  'wasserburg': 'o2 Shop Wasserburg'
+};
+const ROLE_NAMES = { verkaeufer: 'Verkäufer', filialleiter: 'Filialleiter', admin: 'Administrator' };
+
+function fmtWhen(ts){
+  try {
+    if (!ts) return '—';
+    if (ts.toDate) return ts.toDate().toLocaleDateString('de-DE');
+    if (typeof ts === 'number') return new Date(ts).toLocaleDateString('de-DE');
+  } catch(e){}
+  return '—';
+}
+
+// ── Mitarbeiter-Liste (nur noch users – keine Einladungen mehr) ──
+async function loadUsers(){
+  const box = document.getElementById('usrList');
+  box.innerHTML = '<div class="empty">Lade…</div>';
+  try {
+    await ensureAdminProfile();
+    const snap = await getAuthDb().collection('users').get();
+    window.__usrRows = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+    renderUsers();
+  } catch(e){
+    box.innerHTML = '<div class="empty">Fehler: '+esc(e.message||'')+'</div>';
+  }
+}
+
+function usrBadge(status){
+  const m = {
+    pending:  ['Neu','#fef9c3','#a16207'],
+    approved: ['Freigegeben','#dcfce7','#15803d'],
+    rejected: ['Abgelehnt','#fee2e2','#b91c1c'],
+    gesperrt: ['Gesperrt','#fee2e2','#b91c1c']
+  }[status] || ['—','#f1f5f9','#64748b'];
+  return '<span style="display:inline-block;font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px;background:'+m[1]+';color:'+m[2]+';margin-right:6px">'+m[0]+'</span>';
+}
+
+// Baut die Karte für EINEN Mitarbeiter (unverändert gegenüber vorher,
+// nur aus renderUsers() herausgezogen, damit gruppiert gerendert werden kann).
+function renderUserCard(r){
+  const isProtectedAdmin = (r.email || '').toLowerCase() === PS_ADMIN_EMAIL.toLowerCase();
+  const name = esc(r.name || ((r.vorname||'')+' '+(r.nachname||'')).trim()) || esc(r.email||'');
+  const shopOpts = Object.keys(SHOP_NAMES).map(id =>
+    '<option value="'+id+'"'+(id===r.shopId?' selected':'')+'>'+SHOP_NAMES[id]+'</option>'
+  ).join('');
+  const roleOpts = Object.keys(ROLE_NAMES).map(id =>
+    '<option value="'+id+'"'+(id===r.role?' selected':'')+'>'+ROLE_NAMES[id]+'</option>'
+  ).join('');
+
+  // Weitere Standorte: standardmäßig ist jeder Mitarbeiter stationär auf
+  // seinem Heimatshop (shopId) und kann im Pencil Selling nicht wechseln.
+  // Erst ein Eintrag in extraShopIds gibt zusätzliche Standorte frei.
+  const extraIds = Array.isArray(r.extraShopIds) ? r.extraShopIds : [];
+  const extraN = extraIds.length;
+  const extraBadgeTxt = extraN ? '🌍 '+extraN+' weitere'+(extraN===1?'r':'')+' Standort'+(extraN===1?'':'e') : '🔒 Stationär';
+  const extraBadgeCss = extraN ? 'color:#15803d;background:#dcfce7' : 'color:#9a3412;background:#fff7ed';
+  const extraChecks = Object.keys(SHOP_NAMES).filter(id => id !== r.shopId).map(id =>
+    '<label style="display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:#334155;background:#f8fafc;border:1.5px solid #e2e8f0;padding:6px 10px;border-radius:9px;cursor:pointer">'
+    + '<input type="checkbox" onchange="usrToggleExtraShop(\''+r.id+'\',\''+id+'\',this.checked)" '+(extraIds.includes(id)?'checked':'')+' style="width:14px;height:14px;cursor:pointer">'
+    + SHOP_NAMES[id] + '</label>'
+  ).join('');
+
+  return '<div style="border:1px solid '+(isProtectedAdmin?'#bfdbfe':'#e2e8f0')+';background:'+(isProtectedAdmin?'#eff6ff':'#fff')+';border-radius:12px;padding:13px 14px;margin-bottom:10px">'
+    + '<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">'
+    + '<div style="min-width:200px">'
+    +   '<div style="font-weight:800;font-size:14px;color:#0f172a">'+(name||'–')+'</div>'
+    +   '<div style="font-size:12.5px;color:#475569;margin:2px 0 6px">'+esc(r.email||'—')+'</div>'
+    +   '<div>'+usrBadge(r.status)+(isProtectedAdmin?'<span style="display:inline-block;font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px;background:#dbeafe;color:#1d4ed8">Administrator · geschützt</span>':(r.isTestUser?'<span style="display:inline-block;font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px;background:#ede9fe;color:#6d28d9">Testnutzer</span>':''))+'</div>'
+    +   '<div style="font-size:11px;color:#94a3b8;margin-top:5px">Registriert: '+fmtWhen(r.createdAt)+'</div>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+    +   (isProtectedAdmin
+          ? '<span style="font-size:12.5px;font-weight:700;color:#1e40af;padding:9px 12px;background:#dbeafe;border-radius:10px">🏢 Verwaltung / Alle Shops</span><span style="font-size:12.5px;font-weight:700;color:#1e40af;padding:9px 12px;background:#dbeafe;border-radius:10px">Administrator</span>'
+          : '<select onchange="usrSetShop(\'' + r.id + '\',this.value)" style="font-size:12.5px">'+shopOpts+'</select>'
+            + '<select onchange="usrSetRole(\'' + r.id + '\',this.value)" style="font-size:12.5px">'+roleOpts+'</select>'
+            + '<label style="display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:#64748b;cursor:pointer"><input type="checkbox" onchange="usrSetTest(\'' + r.id + '\',this.checked)" '+(r.isTestUser?'checked':'')+' style="width:15px;height:15px;cursor:pointer">Test</label>')
+    + '</div>'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">'
+    +   (isProtectedAdmin
+          ? '<span style="font-size:11.5px;font-weight:800;color:#1d4ed8;padding:7px 10px;border-radius:9px;background:#dbeafe">🔒 Nicht deaktivierbar</span>' + '<button class="btn btn-sm btn-danger" onclick="openOwnAccountDeleteDialog()">🗑 Eigenes Testkonto löschen</button>'
+          : (!r.active ? '<button class="btn btn-sm" onclick="usrApprove(\'' + r.id + '\')">Freigeben</button>' : '')
+            + (r.status==='pending' ? '<button class="btn btn-sm btn-danger" onclick="usrReject(\'' + r.id + '\')">Ablehnen</button>' : '')
+            + (r.active ? '<button class="btn btn-sm btn-danger" onclick="usrDeactivate(\'' + r.id + '\')">Deaktivieren</button>' : '')
+            + (r.email ? '<button class="btn btn-sm btn-ghost" onclick="usrResetPassword(\'' + esc(r.email) + '\',this)">🔑 Passwort zurücksetzen</button>' : '')
+            + '<button class="btn btn-sm btn-danger" onclick="usrDelete(\'' + r.id + '\')">Löschen</button>')
+    + '</div>'
+    + '</div>'
+    + (isProtectedAdmin ? '' :
+      '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #f1f5f9">'
+      + '<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">'
+      +   '<span id="extraBadge-'+r.id+'" style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;'+extraBadgeCss+'">'+extraBadgeTxt+'</span>'
+      +   '<button type="button" class="linklike" onclick="toggleExtraPanel(\''+r.id+'\')">Weitere Standorte verwalten</button>'
+      + '</div>'
+      + '<div id="extra-'+r.id+'" style="display:none;flex-wrap:wrap;gap:7px;margin-top:9px">'+extraChecks+'</div>'
+      + '</div>')
+    + '</div>';
+}
+
+// Merkt sich, welche Shop-Gruppen der Admin manuell aufgeklappt hat, damit
+// das beim nächsten renderUsers() (z.B. nach Freigeben/Ablehnen) erhalten
+// bleibt und nicht wieder zuklappt. Standard: ALLE Gruppen eingeklappt.
+window.__usrOpenGroups = window.__usrOpenGroups || {};
+
+function usrToggleGroup(key, open){
+  window.__usrOpenGroups[key] = open;
+}
+
+function renderUsers(){
+  const rows = window.__usrRows || [];
+  const tab = (document.getElementById('usrTab')||{}).value || 'all';
+  const filtered = rows
+    .filter(r => tab==='all' ? true : r.status===tab)
+    .sort((a,b) => {
+      const rank = s => s==='pending' ? 0 : 1;
+      const d = rank(a.status) - rank(b.status);
+      if (d) return d;
+      return (b.createdAt||0) - (a.createdAt||0);
+    });
+
+  document.getElementById('usrCount').textContent = '(' + filtered.length + ')';
+  const box = document.getElementById('usrList');
+  if (!filtered.length){ box.innerHTML = '<div class="empty">Keine Einträge.</div>'; updatePendingBadge(); return; }
+
+  // Nach Shop gruppieren. Der geschützte Admin (kein shopId) bekommt eine
+  // eigene Gruppe "Verwaltung / Alle Shops". Unbekannte/leere shopId-Werte
+  // landen in "Ohne Shop".
+  const groups = new Map(); // key -> { label, rows: [] }
+  filtered.forEach(r => {
+    const isProtectedAdmin = (r.email || '').toLowerCase() === PS_ADMIN_EMAIL.toLowerCase();
+    let key, label;
+    if (isProtectedAdmin || !r.shopId){
+      key = '__verwaltung__';
+      label = '🏢 Verwaltung / Alle Shops';
+    } else {
+      key = r.shopId;
+      label = '🏬 ' + (SHOP_NAMES[r.shopId] || r.shop || r.shopId);
+    }
+    if (!groups.has(key)) groups.set(key, { label, rows: [] });
+    groups.get(key).rows.push(r);
+  });
+
+  // Sortierung der Gruppen: Verwaltung zuerst, danach Shops alphabetisch.
+  const sortedGroups = Array.from(groups.entries()).sort((a, b) => {
+    if (a[0] === '__verwaltung__') return -1;
+    if (b[0] === '__verwaltung__') return 1;
+    return a[1].label.localeCompare(b[1].label, 'de');
+  });
+
+  let h = '';
+  sortedGroups.forEach(([key, group]) => {
+    const isOpen = !!window.__usrOpenGroups[key]; // Standard: zu
+    const pendingInGroup = group.rows.filter(r => r.status === 'pending').length;
+    h += '<details class="usr-shop-group" style="margin-bottom:10px;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden"'
+      + (isOpen ? ' open' : '')
+      + ' ontoggle="usrToggleGroup(\'' + key + '\', this.open)">'
+      + '<summary style="cursor:pointer;list-style:none;padding:12px 14px;background:#f8fafc;font-weight:800;font-size:13.5px;color:#0f172a;display:flex;align-items:center;gap:10px;user-select:none">'
+      +   '<span>' + group.label + '</span>'
+      +   '<span style="font-size:11.5px;font-weight:700;color:#64748b;background:#e2e8f0;padding:2px 9px;border-radius:999px">' + group.rows.length + '</span>'
+      +   (pendingInGroup ? '<span style="font-size:11px;font-weight:800;color:#a16207;background:#fef9c3;padding:2px 9px;border-radius:999px">' + pendingInGroup + ' neu</span>' : '')
+      + '</summary>'
+      + '<div style="padding:12px 14px;background:#fff">'
+      +   group.rows.map(renderUserCard).join('')
+      + '</div>'
+      + '</details>';
+  });
+  box.innerHTML = h;
+  updatePendingBadge();
+}
+
+async function usrApprove(uid){
+  if (isAdminUid(uid)) return alert('Das Administrator-Konto ist bereits freigegeben.');
+  try { await getAuthDb().collection('users').doc(uid).update({ active:true, status:'approved' }); loadUsers(); }
+  catch(e){ alert(e.message); }
+}
+async function usrReject(uid){
+  if (isAdminUid(uid)) return alert('Das Administrator-Konto kann nicht abgelehnt werden.');
+  try { await getAuthDb().collection('users').doc(uid).update({ active:false, status:'rejected' }); loadUsers(); }
+  catch(e){ alert(e.message); }
+}
+async function usrDeactivate(uid){
+  if (isAdminUid(uid)) return alert('Das Administrator-Konto kann nicht deaktiviert werden.');
+  try { await getAuthDb().collection('users').doc(uid).update({ active:false, status:'gesperrt' }); loadUsers(); }
+  catch(e){ alert(e.message); }
+}
+async function usrSetShop(uid, shopId){
+  if (isAdminUid(uid)) return;
+  try {
+    const row = (window.__usrRows||[]).find(r => r.id===uid);
+    const extraShopIds = Array.isArray(row && row.extraShopIds)
+      ? row.extraShopIds.filter(id => id !== shopId)
+      : [];
+    await getAuthDb().collection('users').doc(uid).update({
+      shopId: shopId,
+      shop: SHOP_NAMES[shopId] || '',
+      extraShopIds: extraShopIds
+    });
+    await loadUsers();
+  }
+  catch(e){ alert(e.message); }
+}
+async function usrSetRole(uid, role){
+  if (isAdminUid(uid)) return;
+  try { await getAuthDb().collection('users').doc(uid).update({ role: role }); }
+  catch(e){ alert(e.message); }
+}
+async function usrSetTest(uid, checked){
+  if (isAdminUid(uid)) return;
+  try { await getAuthDb().collection('users').doc(uid).update({ isTestUser: !!checked }); }
+  catch(e){ alert(e.message); }
+}
+
+function toggleExtraPanel(uid){
+  const el = document.getElementById('extra-'+uid);
+  if (!el) return;
+  el.style.display = (el.style.display === 'flex') ? 'none' : 'flex';
+}
+
+function updateExtraBadge(uid){
+  const row = (window.__usrRows||[]).find(r => r.id===uid);
+  const el = document.getElementById('extraBadge-'+uid);
+  if (!row || !el) return;
+  const n = (row.extraShopIds||[]).length;
+  el.textContent = n ? '🌍 '+n+' weitere'+(n===1?'r':'')+' Standort'+(n===1?'':'e') : '🔒 Stationär';
+  el.style.background = n ? '#dcfce7' : '#fff7ed';
+  el.style.color = n ? '#15803d' : '#9a3412';
+}
+
+// Freigabe weiterer Standorte: ohne Eintrag bleibt der Mitarbeiter stationär
+// und kann im Pencil Selling nur seinen Heimatshop (shopId) nutzen.
+async function usrToggleExtraShop(uid, shopId, checked){
+  if (isAdminUid(uid)) return;
+  try {
+    const ref = getAuthDb().collection('users').doc(uid);
+    if (checked) await ref.update({ extraShopIds: firebase.firestore.FieldValue.arrayUnion(shopId) });
+    else await ref.update({ extraShopIds: firebase.firestore.FieldValue.arrayRemove(shopId) });
+    const row = (window.__usrRows||[]).find(r => r.id===uid);
+    if (row){
+      const cur = new Set(row.extraShopIds || []);
+      if (checked) cur.add(shopId); else cur.delete(shopId);
+      row.extraShopIds = [...cur];
+    }
+    updateExtraBadge(uid);
+  } catch(e){ alert(e.message); }
+}
+function isAdminUid(uid){
+  const row = (window.__usrRows||[]).find(r => r.id===uid);
+  return !!row && (row.email || '').toLowerCase() === PS_ADMIN_EMAIL.toLowerCase();
+}
+
+
+let ownAccountDeleteBusy = false;
+
+function setOwnDeleteError(message){
+  const box = document.getElementById('ownDeleteError');
+  if (!box) return;
+  box.textContent = message || '';
+  box.style.display = message ? 'block' : 'none';
+}
+
+function openOwnAccountDeleteDialog(){
+  const user = getAdminAuth().currentUser;
+  if (!user || (user.email || '').toLowerCase() !== PS_ADMIN_EMAIL.toLowerCase()){
+    alert('Die Löschfunktion ist ausschließlich für das aktuell angemeldete Administratorkonto verfügbar.');
+    return;
+  }
+  const modal = document.getElementById('ownAccountDeleteModal');
+  const pw = document.getElementById('ownDeletePassword');
+  const confirmInput = document.getElementById('ownDeleteConfirm');
+  if (pw) pw.value = '';
+  if (confirmInput) confirmInput.value = '';
+  setOwnDeleteError('');
+  if (modal) modal.style.display = 'flex';
+  setTimeout(() => { try { pw.focus(); } catch(e){} }, 50);
+}
+
+function closeOwnAccountDeleteDialog(){
+  if (ownAccountDeleteBusy) return;
+  const modal = document.getElementById('ownAccountDeleteModal');
+  if (modal) modal.style.display = 'none';
+  setOwnDeleteError('');
+}
+
+async function deleteOwnAdminTestAccount(){
+  if (ownAccountDeleteBusy) return;
+
+  const password = (document.getElementById('ownDeletePassword') || {}).value || '';
+  const confirmation = ((document.getElementById('ownDeleteConfirm') || {}).value || '').trim();
+  const btn = document.getElementById('ownDeleteConfirmBtn');
+  const cancelBtn = document.getElementById('ownDeleteCancelBtn');
+
+  if (!password){
+    setOwnDeleteError('Bitte dein aktuelles Firebase-Passwort eingeben.');
+    return;
+  }
+  if (confirmation.toLocaleUpperCase('de-DE') !== 'LÖSCHEN'){
+    setOwnDeleteError('Bitte zur Bestätigung exakt LÖSCHEN eingeben.');
+    return;
+  }
+
+  let currentUser = getAdminAuth().currentUser;
+  if (!currentUser || (currentUser.email || '').toLowerCase() !== PS_ADMIN_EMAIL.toLowerCase()){
+    setOwnDeleteError('Das Administratorkonto ist nicht mehr angemeldet. Bitte die Seite neu laden.');
+    return;
+  }
+
+  ownAccountDeleteBusy = true;
+  setOwnDeleteError('');
+  if (btn){ btn.disabled = true; btn.textContent = 'Lösche Konto…'; }
+  if (cancelBtn) cancelBtn.disabled = true;
+
+  let profileRef = null;
+  let profileBackup = null;
+
+  try {
+    // Firebase verlangt für eine sicherheitskritische Kontolöschung eine frische Anmeldung.
+    const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, password);
+    await currentUser.reauthenticateWithCredential(credential);
+
+    currentUser = getAdminAuth().currentUser;
+    if (!currentUser || (currentUser.email || '').toLowerCase() !== PS_ADMIN_EMAIL.toLowerCase()){
+      throw new Error('Sicherheitsprüfung des Administratorkontos fehlgeschlagen.');
+    }
+
+    const uid = currentUser.uid;
+    profileRef = getAuthDb().collection('users').doc(uid);
+    const profileSnap = await profileRef.get();
+    profileBackup = profileSnap.exists ? profileSnap.data() : null;
+
+    // Zuerst das Firestore-Profil entfernen.
+    if (profileSnap.exists) await profileRef.delete();
+
+    // Anschließend das eigene Firebase-Authentication-Konto löschen.
+    try {
+      await currentUser.delete();
+    } catch (authDeleteError){
+      // Falls Auth nicht gelöscht werden konnte, das Profil wiederherstellen,
+      // damit kein halbfertiger Zustand entsteht.
+      if (profileBackup && profileRef){
+        try { await profileRef.set(profileBackup); }
+        catch (restoreError){
+          console.error('Benutzerprofil konnte nach fehlgeschlagener Auth-Löschung nicht wiederhergestellt werden:', restoreError);
+        }
+      }
+      throw authDeleteError;
+    }
+
+    try {
+      sessionStorage.removeItem('hetec_admin');
+      sessionStorage.removeItem('hetec_admin_tab');
+    } catch(e){}
+
+    alert('Dein Testkonto wurde vollständig gelöscht. Du wirst jetzt abgemeldet und kannst dich anschließend erneut registrieren.');
+    location.reload();
+  } catch(e){
+    console.error('Eigenes Testkonto konnte nicht gelöscht werden:', e);
+    const code = e && e.code ? String(e.code) : '';
+    let message = 'Konto konnte nicht gelöscht werden: ' + (e && e.message ? e.message : 'Unbekannter Fehler');
+    if (code.includes('wrong-password') || code.includes('invalid-credential') || code.includes('invalid-login-credentials')){
+      message = 'Das eingegebene Passwort ist nicht korrekt.';
+    } else if (code.includes('too-many-requests')){
+      message = 'Zu viele Versuche. Bitte kurz warten und danach erneut probieren.';
+    } else if (code.includes('requires-recent-login')){
+      message = 'Die Anmeldung ist nicht mehr aktuell. Bitte abmelden, neu anmelden und die Löschung erneut starten.';
+    } else if (code.includes('permission-denied')){
+      message = 'Firestore verweigert die Löschung. Bitte die Regeln des Beta-Firebase-Projekts prüfen.';
+    }
+    setOwnDeleteError(message);
+  } finally {
+    ownAccountDeleteBusy = false;
+    if (btn){ btn.disabled = false; btn.textContent = '🗑 Konto endgültig löschen'; }
+    if (cancelBtn) cancelBtn.disabled = false;
+  }
+}
+
+async function usrDelete(uid){
+  if (isAdminUid(uid)) return alert('Das Administrator-Konto ist geschützt und kann hier nicht gelöscht werden.');
+  const row = (window.__usrRows||[]).find(r => r.id===uid);
+  const name = row ? (row.name || ((row.vorname||'')+' '+(row.nachname||'')).trim() || row.email) : 'diesen Nutzer';
+  if (!confirm('Nutzer „'+name+'\u201c wirklich löschen?\n\nDer Datensatz wird entfernt. Das Login-Konto in Firebase Authentication bleibt bestehen und muss dort separat gelöscht werden.')) return;
+  try { await getAuthDb().collection('users').doc(uid).delete(); loadUsers(); }
+  catch(e){ alert(e.message); }
+}
+
+// Setzt kein Passwort direkt (das kann der Client-SDK ohne eigenes Backend
+// nicht), sondern verschickt die normale Firebase-Reset-Mail an den
+// Mitarbeiter - der Mitarbeiter vergibt sich darüber selbst ein neues
+// Passwort. Funktioniert unabhängig davon, ob/wie er gerade angemeldet ist.
+async function usrResetPassword(email, btn){
+  if (!email) return;
+  if (!confirm('Passwort-Zurücksetzen-Mail an\n' + email + '\nverschicken?')) return;
+  if (btn){ btn.disabled = true; btn.textContent = 'Sende…'; }
+  try {
+    await getAdminAuth().sendPasswordResetEmail(email);
+    alert('✅ Mail verschickt an ' + email + '. Der Mitarbeiter kann darüber ein neues Passwort vergeben.');
+  } catch(e){
+    alert('Fehler: ' + (e && e.message || e));
+  } finally {
+    if (btn){ btn.disabled = false; btn.textContent = '🔑 Passwort zurücksetzen'; }
+  }
+}
+
+// Shop-Vorschläge aus vorhandenen Beratungsdaten füllen (sobald Stats geladen sind)
+function fillShopSuggestions(){
+  try {
+    const dl = document.getElementById('shopList');
+    if (!dl || !window.rows) return;
+    const shops = [...new Set(window.rows.map(r => (r.shop||'').toString().trim()).filter(s => s && s.toLowerCase()!=='telekom'))].sort();
+    dl.innerHTML = shops.map(s => '<option value="'+esc(s)+'">').join('');
+  } catch(e){}
+}
+
+restoreAdminSession();
+
 </script>
 </body>
 </html>
