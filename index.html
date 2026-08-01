@@ -421,12 +421,12 @@
 <script>
 // ══ Firebase (dieselbe DB wie Pencil Selling) ══
 const FB = {
-  apiKey: "AIzaSyCgKvoW6mB_heUkQDpeZMFE-0CQSUFuN0g",
-  authDomain: "pencil-selling-stats-2f86e.firebaseapp.com",
-  projectId: "pencil-selling-stats-2f86e",
-  storageBucket: "pencil-selling-stats-2f86e.firebasestorage.app",
-  messagingSenderId: "166126857606",
-  appId: "1:166126857606:web:0b29898ae53a8c3aaa1007"
+  apiKey: "AIzaSyD0z1CX9vcdRQPtIo9pCjZ7Xs1h6dLl_8w",
+  authDomain: "o2-pencil-selling.firebaseapp.com",
+  projectId: "o2-pencil-selling",
+  storageBucket: "o2-pencil-selling.firebasestorage.app",
+  messagingSenderId: "347119579425",
+  appId: "1:347119579425:web:afbb0b60fe6a266627ce60"
 };
 // Die Statistik-App immer ausdrücklich als [DEFAULT]-App initialisieren.
 // So funktioniert die Seite auch dann, wenn die separate Auth-App bereits existiert.
@@ -1459,31 +1459,19 @@ function kpi(l, v, s, c){
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
 
 // ══════════════════════════════════════════════════════════════════
-//  MITARBEITER & EINLADUNGEN  (Beta-Projekt: beta-pencil-selling)
-//  Separate Firebase-App 'auth' – getrennt von der Stats-DB oben.
+//  MITARBEITER & EINLADUNGEN  (konsolidiertes Projekt: o2-pencil-selling)
+//  Dasselbe Projekt wie die Statistik oben (FB/statsApp) — keine separate
+//  App-Instanz mehr nötig. Konsolidiert von "beta-pencil-selling" (altes,
+//  separates Konto) hierher, damit alles auf einem Account liegt.
 // ══════════════════════════════════════════════════════════════════
-const AUTH_FB = {
-  apiKey: "AIzaSyAV2CD6Kwp0WVmeGuVO4lIHbAf-UhrQZ1M",
-  authDomain: "beta-pencil-selling.firebaseapp.com",
-  projectId: "beta-pencil-selling",
-  storageBucket: "beta-pencil-selling.firebasestorage.app",
-  messagingSenderId: "154760755449",
-  appId: "1:154760755449:web:a4a006f738077eb5344a28"
-};
-
-
 const PS_ADMIN_EMAIL = 'd.dasilva@hetec-gmbh.de';
 
 function getAuthApp(){
-  const existing = firebase.apps.find(a => a.name === 'auth');
-  return existing ? existing : firebase.initializeApp(AUTH_FB, 'auth');
+  return statsApp;
 }
 
-let authDb = null;
 function getAuthDb(){
-  if (authDb) return authDb;
-  authDb = firebase.firestore(getAuthApp());
-  return authDb;
+  return db;
 }
 function getAdminAuth(){
   return firebase.auth(getAuthApp());
@@ -1946,7 +1934,7 @@ async function deleteOwnAdminTestAccount(){
     } else if (code.includes('requires-recent-login')){
       message = 'Die Anmeldung ist nicht mehr aktuell. Bitte abmelden, neu anmelden und die Löschung erneut starten.';
     } else if (code.includes('permission-denied')){
-      message = 'Firestore verweigert die Löschung. Bitte die Regeln des Beta-Firebase-Projekts prüfen.';
+      message = 'Firestore verweigert die Löschung. Bitte die Regeln des Firebase-Projekts (o2-pencil-selling) prüfen.';
     }
     setOwnDeleteError(message);
   } finally {
