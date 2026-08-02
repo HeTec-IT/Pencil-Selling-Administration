@@ -178,9 +178,14 @@
     <div class="mark">🔐</div>
     <h1>Pencil Selling</h1>
     <p>Administration</p>
-    <input type="text" id="loginEmail" placeholder="E-Mail" autocomplete="username" style="margin-bottom:10px">
-    <input type="password" id="pw" placeholder="Passwort" autocomplete="current-password">
-    <button class="btn" style="width:100%;margin-top:12px" onclick="doLogin()">Anmelden</button>
+    <form id="loginForm" onsubmit="return handleLoginSubmit(event)" autocomplete="on">
+      <input type="text" id="loginEmail" name="email" placeholder="E-Mail" autocomplete="username" style="margin-bottom:10px">
+      <input type="password" id="pw" name="password" placeholder="Passwort" autocomplete="current-password">
+      <label style="display:flex;align-items:center;gap:7px;margin-top:12px;font-size:12.5px;font-weight:700;color:var(--body);cursor:pointer;user-select:none">
+        <input type="checkbox" id="loginRemember" checked style="width:15px;height:15px;cursor:pointer"> Anmeldedaten merken
+      </label>
+      <button type="submit" class="btn" style="width:100%;margin-top:12px">Anmelden</button>
+    </form>
     <div id="loginErr" style="color:#C23B3B;font-size:12.5px;font-weight:700;margin-top:11px;display:none">Falsches Passwort</div>
   </div>
 </div>
@@ -467,6 +472,9 @@ async function doLogin(){
   if (!email){ err.textContent = 'Bitte E-Mail eingeben.'; err.style.display = 'block'; return; }
   if (btn){ btn.disabled = true; btn.textContent = 'Prüfe…'; }
   try {
+    const remember = (document.getElementById('loginRemember')||{}).checked !== false;
+    const persistence = remember ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION;
+    await getAdminAuth().setPersistence(persistence);
     const cred = await getAdminAuth().signInWithEmailAndPassword(email, v);
     if (cred.user) await cred.user.getIdToken(true);
     await ensureAdminProfile();
@@ -483,8 +491,14 @@ async function doLogin(){
   }
   if (btn){ btn.disabled = false; btn.textContent = 'Anmelden'; }
 }
-document.getElementById('pw').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-document.getElementById('loginEmail').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+// Echtes Formular + type="submit": erst dadurch bieten Chrome/Edge/Firefox
+// zuverlässig "Passwort speichern?" an (bei reinem onclick-Handler ohne
+// <form> zeigen die meisten Browser diesen Dialog nicht/nicht zuverlässig).
+function handleLoginSubmit(event){
+  event.preventDefault();
+  doLogin();
+  return false;
+}
 
 // ── Haupt-Tabs ──
 const TAB_TITLES = {
