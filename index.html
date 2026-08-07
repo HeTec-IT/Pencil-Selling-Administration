@@ -1625,6 +1625,11 @@ function usrBadge(status){
 // nur aus renderUsers() herausgezogen, damit gruppiert gerendert werden kann).
 function renderUserCard(r){
   const isProtectedAdmin = (r.email || '').toLowerCase() === PS_ADMIN_EMAIL.toLowerCase();
+  // Mehrere Datensätze können die Admin-E-Mail tragen (alte Registrierungen,
+  // deren Auth-Konto evtl. schon weg ist). Nur der zur AKTUELLEN Sitzung
+  // gehörende Datensatz bekommt den vollen Selbstlöschen-Dialog (inkl. Auth).
+  const myUid = (getAdminAuth().currentUser && getAdminAuth().currentUser.uid) || null;
+  const isOwnProtectedRow = isProtectedAdmin && r.id === myUid;
   const name = esc(r.name || ((r.vorname||'')+' '+(r.nachname||'')).trim()) || esc(r.email||'');
   const shopOpts = Object.keys(SHOP_NAMES).map(id =>
     '<option value="'+id+'"'+(id===r.shopId?' selected':'')+'>'+SHOP_NAMES[id]+'</option>'
@@ -1663,7 +1668,9 @@ function renderUserCard(r){
     + '</div>'
     + '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">'
     +   (isProtectedAdmin
-          ? '<span style="font-size:11.5px;font-weight:800;color:#1d4ed8;padding:7px 10px;border-radius:9px;background:#dbeafe">🔒 Nicht deaktivierbar</span>' + '<button class="btn btn-sm btn-danger" onclick="openOwnAccountDeleteDialog()">🗑 Eigenes Testkonto löschen</button>'
+          ? (isOwnProtectedRow
+              ? '<span style="font-size:11.5px;font-weight:800;color:#1d4ed8;padding:7px 10px;border-radius:9px;background:#dbeafe">🔒 Nicht deaktivierbar</span>' + '<button class="btn btn-sm btn-danger" onclick="openOwnAccountDeleteDialog()">🗑 Eigenes Testkonto löschen</button>'
+              : '<span style="font-size:11.5px;font-weight:800;color:#b91c1c;padding:7px 10px;border-radius:9px;background:#fee2e2">⚠️ Altes Konto</span>' + '<button class="btn btn-sm btn-danger" onclick="usrDeleteStaleAdmin(\'' + r.id + '\')">🗑 Datensatz löschen</button>')
           : (!r.active ? '<button class="btn btn-sm" onclick="usrApprove(\'' + r.id + '\')">Freigeben</button>' : '')
             + (r.status==='pending' ? '<button class="btn btn-sm btn-danger" onclick="usrReject(\'' + r.id + '\')">Ablehnen</button>' : '')
             + (r.active ? '<button class="btn btn-sm btn-danger" onclick="usrDeactivate(\'' + r.id + '\')">Deaktivieren</button>' : '')
@@ -1963,6 +1970,24 @@ async function usrDelete(uid){
   const row = (window.__usrRows||[]).find(r => r.id===uid);
   const name = row ? (row.name || ((row.vorname||'')+' '+(row.nachname||'')).trim() || row.email) : 'diesen Nutzer';
   if (!confirm('Nutzer „'+name+'\u201c wirklich löschen?\n\nDer Datensatz wird entfernt. Das Login-Konto in Firebase Authentication bleibt bestehen und muss dort separat gelöscht werden.')) return;
+  try { await getAuthDb().collection('users').doc(uid).delete(); loadUsers(); }
+  catch(e){ alert(e.message); }
+}
+
+// Löscht einen ALTEN/verwaisten Admin-Datensatz (gleiche Admin-E-Mail, aber
+// nicht die gerade aktive Sitzung – z.B. Reste einer früheren Registrierung,
+// deren Firebase-Auth-Konto bereits gelöscht ist). Entfernt NUR den
+// Firestore-Datensatz, genau wie usrDelete() – ein evtl. noch bestehendes
+// Auth-Konto muss separat in der Firebase Console gelöscht werden.
+async function usrDeleteStaleAdmin(uid){
+  const myUid = (getAdminAuth().currentUser && getAdminAuth().currentUser.uid) || null;
+  if (uid === myUid){
+    alert('Das ist dein aktuell eingeloggtes Konto – dafür bitte „Eigenes Testkonto löschen“ verwenden.');
+    return;
+  }
+  const row = (window.__usrRows||[]).find(r => r.id===uid);
+  const when = row ? fmtWhen(row.createdAt) : '';
+  if (!confirm('Alten Admin-Datensatz (registriert: '+when+') wirklich löschen?\n\nEntfernt nur den Firestore-Datensatz. Ein eventuell noch bestehendes Login-Konto in Firebase Authentication bleibt bestehen und muss dort separat gelöscht werden.')) return;
   try { await getAuthDb().collection('users').doc(uid).delete(); loadUsers(); }
   catch(e){ alert(e.message); }
 }
