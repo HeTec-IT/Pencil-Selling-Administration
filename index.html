@@ -206,6 +206,7 @@
     <button class="tabbtn" data-tab="mitarbeiter" onclick="switchTab('mitarbeiter')"><span class="ico">👤</span><span class="lbl">Mitarbeiter</span></button>
     <button class="tabbtn" data-tab="coaching" onclick="switchTab('coaching')"><span class="ico">🎯</span><span class="lbl">Coaching-Analyse</span></button>
     <button class="tabbtn" data-tab="skip" onclick="switchTab('skip')"><span class="ico">⏭️</span><span class="lbl">Skip-Limits</span></button>
+    <button class="tabbtn" data-tab="werkzeuge" onclick="switchTab('werkzeuge')"><span class="ico">🧰</span><span class="lbl">Werkzeug-Nutzung</span></button>
 
     <div class="navsec">Verwaltung</div>
     <button class="tabbtn" data-tab="mitarbeiterverwaltung" onclick="switchTab('mitarbeiterverwaltung')"><span class="ico">👥</span><span class="lbl">Mitarbeiterverwaltung</span><span class="navbadge" id="navPendingBadge" style="display:none"></span></button>
@@ -359,6 +360,22 @@
   </div>
   </div>
 
+  <div class="tabpanel" data-panel="werkzeuge">
+  <!-- Werkzeug-Nutzung -->
+  <div class="card">
+    <h2>🧰 Werkzeug-Nutzung</h2>
+    <div class="hint">
+      Wie oft öffnet welcher Mitarbeiter diesen Monat Aktionsmappe, Freunde werben, Übersetzer und Rabattrechner
+      (Gutschrift-Rechner) im Pencil Selling. Zählt jeden Klick auf den jeweiligen Button.
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <label style="font-size:12px;font-weight:800;color:var(--muted)">👤 Mitarbeiter:</label>
+      <select id="werkzeugEmpFilter" onchange="renderWerkzeuge()"><option value="__all__">Alle Mitarbeiter</option></select>
+    </div>
+    <div id="werkzeugTable"><div class="empty">Lade Daten…</div></div>
+  </div>
+  </div>
+
   <div class="tabpanel" data-panel="news">
   <!-- News -->
   <div class="card">
@@ -507,6 +524,7 @@ const TAB_TITLES = {
   mitarbeiter: ['Mitarbeiter', 'Vorgänge und Abschlussquote je Mitarbeiter'],
   coaching: ['Coaching-Analyse', 'Wie konsequent wird die Mappe genutzt?'],
   skip: ['Skip-Limits', 'Übersprungene Beratungen & digitale Gründe'],
+  werkzeuge: ['Werkzeug-Nutzung', 'Wie oft öffnet welcher Mitarbeiter welches Werkzeug'],
   news: ['News-Ticker', 'Meldungen je Marke verwalten']
 };
 function switchTab(name){
@@ -710,10 +728,12 @@ async function loadStats(){
     } catch(e2){ rows = []; }
   }
   await loadSkipLimits();
+  await loadToolUsage();
   fillShopDropdown();
   fillEmpDropdown();
   fillCoachShopDropdown();
   fillCoachEmpDropdown();
+  fillWerkzeugEmpDropdown();
   renderAll();
 }
 
@@ -844,6 +864,54 @@ async function delAgentRows(i){
 }
 
 function monthKey(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+
+// ── Werkzeug-Nutzung: EIN Query über die ganze Collection (statt pro
+// Mitarbeiter einzeln wie bei Skip-Limits), da hier kein Admin-Schreibzugriff
+// noetig ist - nur Anzeige. Schreibt wird ausschliesslich von Pencil Selling
+// selbst (index.html, trackToolUsage) beim Klick auf die jeweiligen Buttons.
+let toolUsageData = {};   // { agent: { aktionsmappe, freundeWerbenFreunde, uebersetzer, rabattrechner } }
+const TOOL_DEFS = [
+  ['aktionsmappe', 'Aktionsmappe'],
+  ['freundeWerbenFreunde', 'Freunde werben'],
+  ['uebersetzer', 'Übersetzer'],
+  ['rabattrechner', 'Rabattrechner']
+];
+async function loadToolUsage(){
+  toolUsageData = {};
+  try {
+    const snap = await db.collection('tool_usage').where('month','==',monthKey()).get();
+    snap.forEach(doc => {
+      const d = doc.data();
+      if (!d || !d.agent || !d.tool) return;
+      if (!toolUsageData[d.agent]) toolUsageData[d.agent] = {};
+      toolUsageData[d.agent][d.tool] = d.count || 0;
+    });
+  } catch(e){ console.error('loadToolUsage:', e); }
+}
+function fillWerkzeugEmpDropdown(){
+  const sel = document.getElementById('werkzeugEmpFilter');
+  if (!sel) return;
+  const cur = sel.value || '__all__';
+  const agents = [...new Set(rows.map(r => (r.user||'').toString().trim()).filter(u => u && u !== '–' && u !== 'Unbekannt'))].sort();
+  sel.innerHTML = '<option value="__all__">Alle Mitarbeiter</option>' + agents.map(a => '<option value="'+esc(a)+'">'+esc(a)+'</option>').join('');
+  sel.value = (cur === '__all__' || agents.includes(cur)) ? cur : '__all__';
+}
+function renderWerkzeuge(){
+  const tbl = document.getElementById('werkzeugTable');
+  if (!tbl) return;
+  const filter = (document.getElementById('werkzeugEmpFilter')||{}).value || '__all__';
+  let agents = [...new Set(rows.map(r => (r.user||'').toString().trim()).filter(u => u && u !== '–' && u !== 'Unbekannt'))].sort();
+  if (filter !== '__all__') agents = agents.filter(a => a === filter);
+  if (!agents.length){ tbl.innerHTML = '<div class="empty">Keine Mitarbeiterdaten.</div>'; return; }
+  let h = '<table><tr><th>Mitarbeiter</th>' + TOOL_DEFS.map(t => '<th style="text-align:center">'+esc(t[1])+'</th>').join('') + '</tr>';
+  agents.forEach(a => {
+    const d = toolUsageData[a] || {};
+    h += '<tr><td style="font-weight:700">'+esc(a)+'</td>' +
+      TOOL_DEFS.map(t => '<td style="text-align:center">'+(d[t[0]]||0)+'</td>').join('') +
+      '</tr>';
+  });
+  tbl.innerHTML = h + '</table>';
+}
 
 async function loadSkipLimits(){
   skipData = {};
@@ -1289,7 +1357,7 @@ function renderAll(){
     const label = sel && sel.selectedOptions[0] ? sel.selectedOptions[0].textContent : 'Alle Shops';
     info.textContent = '· ' + n + ' Beratungen';
   }
-  renderStats(); renderCoaching(); renderSkip();
+  renderStats(); renderCoaching(); renderSkip(); renderWerkzeuge();
 }
 
 function normProv(p){
