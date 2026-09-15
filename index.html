@@ -66,6 +66,14 @@
 
   .main{flex:1;min-width:0;display:flex;flex-direction:column}
   .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:18px 32px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:5}
+  .filterbar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 32px;display:none;flex-wrap:wrap;align-items:center;gap:22px;position:sticky;top:63px;z-index:4}
+  .filterbar.show{display:flex}
+  .filterbar-row{display:flex;align-items:center;gap:8px}
+  .filterbar-row label{font-size:12px;font-weight:800;color:var(--muted)}
+  .filterbar-info{font-size:11.5px;color:var(--muted);font-weight:600}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:14px;padding:10px 14px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm)}
+  .legend span{font-size:11.5px;color:var(--body)}
+  .legend b{color:var(--ink)}
   .topbar h1{font-size:18px;font-weight:800;letter-spacing:-.01em}
   .topbar .sub{font-size:12.5px;color:var(--muted);margin-top:1px}
   .content{padding:26px 32px 70px;max-width:980px;width:100%}
@@ -227,42 +235,44 @@
         <div class="sub">Alle abgeschlossenen Beratungen aus der zentralen Statistik</div>
       </div>
     </div>
+    <div class="filterbar" id="globalFilterBar">
+      <div class="filterbar-row">
+        <label>🏪 Shop:</label>
+        <select id="shopFilter" onchange="onShopChange()"><option value="__all__">Alle Shops</option></select>
+        <span id="shopInfo" class="filterbar-info"></span>
+      </div>
+      <div class="filterbar-row">
+        <label>📅 Zeitraum:</label>
+        <select id="range" onchange="onRangeChange()">
+          <option value="today">Heute</option>
+          <option value="7">Letzte 7 Tage</option>
+          <option value="30" selected>Letzte 30 Tage</option>
+          <option value="90">Letzte 90 Tage</option>
+          <option value="365">Letzte 12 Monate</option>
+          <option value="0">Alles</option>
+          <option value="month">Kalendermonat…</option>
+          <option value="custom">Eigener Zeitraum…</option>
+        </select>
+        <!-- Monatsauswahl -->
+        <input type="month" id="monthPick" style="display:none" onchange="renderStats()">
+        <!-- Eigener Zeitraum -->
+        <span id="customRange" style="display:none;align-items:center;gap:6px">
+          <input type="date" id="dateFrom" onchange="renderStats()">
+          <span style="color:var(--muted);font-weight:700">bis</span>
+          <input type="date" id="dateTo" onchange="renderStats()">
+        </span>
+        <span id="rangeInfo" class="filterbar-info"></span>
+      </div>
+    </div>
     <div class="content">
   <div class="tabpanel" data-panel="uebersicht">
   <!-- KPIs -->
   <div class="card">
     <h2>📈 Überblick</h2>
-    <div class="hint">Alle abgeschlossenen Beratungen aus der zentralen Statistik.</div>
-    <div class="row" style="margin-bottom:12px">
-      <label style="font-size:12px;font-weight:800;color:#64748b">🏪 Shop:</label>
-      <select id="shopFilter" onchange="onShopChange()"><option value="__all__">Alle Shops</option></select>
-      <span id="shopInfo" style="font-size:11.5px;color:#94a3b8;font-weight:600"></span>
-    </div>
-    <div class="row" style="margin-bottom:12px">
-      <label style="font-size:12px;font-weight:800;color:#64748b">👤 Mitarbeiter:</label>
-      <select id="empFilter" onchange="renderAll()"><option value="__all__">Alle Mitarbeiter</option></select>
-    </div>
+    <div class="hint">Shop und Zeitraum gelten oben für Übersicht, Mitarbeiter und Coaching-Analyse gemeinsam.</div>
     <div class="row" style="margin-bottom:16px">
-      <label style="font-size:12px;font-weight:800;color:#64748b">Zeitraum:</label>
-      <select id="range" onchange="onRangeChange()">
-        <option value="today">Heute</option>
-        <option value="7">Letzte 7 Tage</option>
-        <option value="30" selected>Letzte 30 Tage</option>
-        <option value="90">Letzte 90 Tage</option>
-        <option value="365">Letzte 12 Monate</option>
-        <option value="0">Alles</option>
-        <option value="month">Kalendermonat…</option>
-        <option value="custom">Eigener Zeitraum…</option>
-      </select>
-      <!-- Monatsauswahl -->
-      <input type="month" id="monthPick" style="display:none" onchange="renderStats()">
-      <!-- Eigener Zeitraum -->
-      <span id="customRange" style="display:none;align-items:center;gap:6px">
-        <input type="date" id="dateFrom" onchange="renderStats()">
-        <span style="color:#94a3b8;font-weight:700">bis</span>
-        <input type="date" id="dateTo" onchange="renderStats()">
-      </span>
-      <span id="rangeInfo" style="font-size:11.5px;color:#94a3b8;font-weight:600"></span>
+      <label style="font-size:12px;font-weight:800;color:#64748b">👤 Mitarbeiter (nur für diese KPIs):</label>
+      <select id="empFilter" onchange="renderAll()"><option value="__all__">Alle Mitarbeiter</option></select>
     </div>
     <div class="kpis" id="kpis"><div class="empty" style="grid-column:1/-1">Lade Daten…</div></div>
     <div id="exemptInfo"></div>
@@ -308,7 +318,13 @@
   <!-- Mitarbeiter -->
   <div class="card">
     <h2>👥 Mitarbeiter</h2>
-    <div class="hint">Vorgänge und Abschlussquote je Mitarbeiter im gewählten Zeitraum. Zeigt immer alle Mitarbeiter – unabhängig von der Mitarbeiter-Auswahl in der Übersicht.</div>
+    <div class="hint">Vorgänge je Mitarbeiter im oben gewählten Shop &amp; Zeitraum. Zeigt immer alle Mitarbeiter des Shops – unabhängig von einer Mitarbeiter-Auswahl.</div>
+    <div class="legend">
+      <span><b>Beratungen</b> – zählt sobald „Aktuelle Situation" ausgefüllt & gespeichert/geschlossen wurde, unabhängig vom Ergebnis</span>
+      <span><b>Abschlüsse</b> – davon mit Ergebnis „Abschluss"</span>
+      <span><b>Quote</b> – Abschlüsse ÷ Beratungen</span>
+      <span><b>Qualität</b> – Anteil Beratungen mit vollständig ausgefüllter 1. Seite (10/10 Pflichtfeldern)</span>
+    </div>
     <div id="agents"><div class="empty">Lade Daten…</div></div>
   </div>
   </div>
@@ -528,9 +544,12 @@ const TAB_TITLES = {
   werkzeuge: ['Werkzeug-Nutzung', 'Wie oft öffnet welcher Mitarbeiter welches Werkzeug'],
   news: ['News-Ticker', 'Meldungen je Marke verwalten']
 };
+const FILTERBAR_TABS = ['uebersicht', 'mitarbeiter', 'coaching'];
 function switchTab(name){
   document.querySelectorAll('.tabbtn').forEach(b => b.classList.toggle('on', b.getAttribute('data-tab') === name));
   document.querySelectorAll('.tabpanel').forEach(p => p.classList.toggle('on', p.getAttribute('data-panel') === name));
+  const fb = document.getElementById('globalFilterBar');
+  if (fb) fb.classList.toggle('show', FILTERBAR_TABS.includes(name));
   const t = TAB_TITLES[name];
   if (t){
     const h1 = document.getElementById('pageTitle');
