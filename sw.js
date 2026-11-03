@@ -1,4 +1,4 @@
-const CACHE = 'pencil-admin-v1';
+const CACHE = 'hetec-admin-v1';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -11,8 +11,11 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
+// Netzwerk zuerst, Cache nur als Fallback – Firebase/Google-Anfragen nie anfassen
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+  if (url.origin !== self.location.origin) return;
   e.respondWith(
     fetch(e.request).then(r => {
       const c = r.clone();

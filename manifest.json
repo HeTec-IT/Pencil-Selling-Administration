@@ -1,12 +1,12 @@
 {
-  "name": "Pencil Selling Administration",
-  "short_name": "Pencil Admin",
+  "name": "HeTec Admin – Pencil Selling",
+  "short_name": "HeTec Admin",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#F3F4F9",
-  "theme_color": "#14162B",
+  "orientation": "any",
+  "background_color": "#F4F5F7",
+  "theme_color": "#FFFFFF",
   "lang": "de",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
